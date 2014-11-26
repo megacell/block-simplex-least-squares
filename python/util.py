@@ -59,7 +59,7 @@ def block_J(Js):
 
 def get_block_sizes(U):
     # Sum along rows
-    return array(U.sum(axis=1)).astype(int)
+    return array((U>0).sum(axis=1)).astype(int)
 
 def block_sizes_to_N(block_sizes):
     """Converts a list of the block sizes to a scipy.sparse matrix.
@@ -140,7 +140,59 @@ def assert_scaled_incidence(M):
     assert (np.abs(array(col_sum) - array(col_nz) * entry_val) < 1e-10).all(), \
         'Not a proper scaled incidence matrix, check column entries'
 
-def load_data(filename,full=False,OD=False,CP=False,eq=None):
+def remove_zero_rows(M,x):
+    nz = array(M.sum(axis=1).nonzero()[0])
+    return M[nz,:], x[nz]
+
+def EQ_block_sort(EQ,A,x,M=None):
+    """
+    Reorder columns by blocks of flow, given by EQ, e.g. OD flow or waypoint flow
+
+    :param EQ: incidence matrix for equality constraints
+    :param A:
+    :param x:
+    :param M: optional matrix that also need columns sorted accordingly
+    :return: rsort_index is the indices to reverse the sort
+    """
+    block_sizes = get_block_sizes(EQ)
+    rank = EQ.nonzero()[0]
+    sort_index = np.argsort(rank)
+    A = A[:,sort_index] # reorder
+    x = x[sort_index] # reorder
+    EQ = EQ[:,sort_index]
+    rsort_index = np.argsort(sort_index) # revert sort
+    if M is not None:
+        M = M[:,sort_index]
+        return (EQ,A,x,block_sizes,rsort_index,M)
+    return (EQ,A,x,block_sizes,rsort_index)
+
+def EQ_block_scale(EQ,EQx,A,x,M=None,m=None):
+    """
+    Removes zero _blocks_ and scales matrices by block flow, given by EQ
+
+    :param EQ: incidence matrix for equality constraints
+    :param EQx: corresponding flow (EQ * x)
+    :param A:
+    :param x:
+    :param M: optional matrix that also needs columns scaled/zeroed accordingly
+    :param m: optional vector (M*x) that also need columns zeroed
+    :return:
+    """
+    scaling =  EQ.T.dot(EQ.dot(x))
+    nz = scaling.nonzero()[0]
+    x_split = np.nan_to_num(x / scaling)[nz]
+    scaling = scaling[nz]
+    DEQ = sps.diags([scaling],[0])
+    A = A[:,nz].dot(DEQ)
+    EQ,EQx = remove_zero_rows(EQ[:,nz].dot(DEQ),EQx)
+    assert la.norm(EQ.dot(x_split) - EQx) < 1e-8, 'Improper scaling: EQx != EQx'
+    if M is not None and m is not None:
+        M, m = remove_zero_rows(M[:,nz].dot(DEQ),m)
+        return (EQ,EQx,A,x_split,scaling,M,m)
+    return (EQ,EQx,A,x_split,scaling)
+
+
+def load_data(filename,full=False,OD=False,CP=False,eq=None,init=False):
     """
     Load data from file about network state
 
@@ -180,7 +232,7 @@ def load_data(filename,full=False,OD=False,CP=False,eq=None):
     nz = [i for i in xrange(A.shape[0]) if A[i,:].nnz == 0]
     nnz = [i for i in xrange(A.shape[0]) if A[i,:].nnz > 0]
     A, b = A[nnz,:], b[nnz]
-    assert la.norm(A.dot(x_true) - b) < 1e-3, 'Check data input: Ax != b'
+    assert la.norm(A.dot(x_true) - b) < 1e-8, 'Check data input: Ax != b'
 
     n = x_true.shape[0]
     # OD-route
@@ -192,60 +244,68 @@ def load_data(filename,full=False,OD=False,CP=False,eq=None):
         U,f = sparse(data['U']), array(data['f'])
         assert_simplex_incidence(U, n) # ASSERT
 
-    # Reorder routes by blocks of flow, e.g. OD flow or waypoint flow given by U
-    if data.has_key('block_sizes'):
-        eq = None
-        block_sizes = array(data['block_sizes'])
-        rsort_index = None
-    else:
-        W = T if eq == 'OD' else U
-        block_sizes = get_block_sizes(W)
-        rank = W.nonzero()[0]
-        sort_index = np.argsort(rank)
-
-        if CP and 'U' in data:
-            U = U[:,sort_index] # reorder
-        if OD and 'T' in data:
-            T = T[:,sort_index] # reorder
-        A = A[:,sort_index] # reorder
-        x_true = x_true[sort_index] # reorder
-        rsort_index = np.argsort(sort_index) # revert sort
-
-    logging.debug('Creating sparse N matrix')
-    N = block_sizes_to_N(block_sizes)
-
-    logging.debug('File loaded successfully')
-
-    # Scale matrices by block
-    print la.norm(A.dot(x_true) - b)
+    # Process equality constraints: scale by block, remove zero blocks, reorder
     if eq == 'OD' and 'T' in data:
-        scaling =  T.T.dot(T.dot(x_true))
-        x_split = x_true / scaling
-        DT = sps.diags([scaling],[0])
-        A = A.dot(DT)
         if CP and 'U' in data:
-            U = U.dot(DT)
+            T,d,A,x_split,scaling,U,f = EQ_block_scale(T,d,A,x_true,M=U,m=f)
+            T,A,x_split,block_sizes,rsort_index,U = EQ_block_sort(T,A,x_split,M=U)
             AA,bb = sps.vstack([A,U]), np.concatenate((b,f))
         else:
+            T, d, A, x_split,scaling = EQ_block_scale(T,d,A,x_true)
+            T,A,x_split,block_sizes,rsort_index = EQ_block_sort(T,A,x_split)
             AA,bb = A,b
     elif eq == 'CP' and 'U' in data:
-        scaling =  U.T.dot(U.dot(x_true))
-        x_split = x_true / scaling
-        DU = sps.diags([scaling],[0])
-        A = A.dot(DU)
         if OD and 'T' in data:
-            T = T.dot(DU)
+            U,f,A,x_split,scaling,T,d = EQ_block_scale(U,f,A,x_true,M=T,m=d)
+            U,A,x_split,block_sizes,rsort_index,T = EQ_block_sort(U,A,x_split,M=T)
             AA,bb = sps.vstack([A,T]), np.concatenate((b,d))
         else:
+            U, f, A, x_split, scaling = EQ_block_scale(U,f,A,x_true)
+            U,A,x_split,block_sizes,rsort_index = EQ_block_sort(U,A,x_split)
             AA,bb = A,b
     else:
+        # TODO DEPRECATE
         x_split = x_true
         # TODO what is going on here????
         scaling = array(A.sum(axis=0)/(A > 0).sum(axis=0))
         scaling[np.isnan(scaling)]=0 # FIXME this is not accurate
         AA,bb = A,b
-    assert la.norm(A.dot(x_split) - b) < 1e-3, 'Improper scaling: Ax != b'
+    if 'T' in data:
+        assert la.norm(T.dot(x_split) - d) < 1e-8, 'Improper scaling: Tx != d'
+    if 'U' in data:
+        assert la.norm(U.dot(x_split) - f) < 1e-8, 'Improper scaling: Ux != f'
+    assert la.norm(A.dot(x_split) - b) < 1e-8, 'Improper scaling: Ax != b'
+    assert la.norm(AA.dot(x_split) - bb) < 1e-8, 'Improper scaling: AAx != bb'
 
+    logging.debug('Creating sparse N matrix')
+    N = block_sizes_to_N(block_sizes)
+
+    logging.info('A : %s, blocks: %s' % (A.shape, block_sizes.shape))
+    logging.info('T : %s, U: %s' % (T.shape, U.shape))
+
+    logging.debug('File loaded successfully')
+    if init:
+        if eq == 'OD' and 'T' in data:
+            if T.shape[0] == T.shape[1]:
+                x0 = sps.linalg.spsolve(T,d)
+                error = np.linalg.norm(x0-x_split)
+                logging.info('Exact solution, error: %s' % error)
+            else:
+                x0 = sps.linalg.lsmr(T,d)[0]
+                error = np.linalg.norm(x0-x_split)
+                logging.info('lsmr solution, error: %s' % error)
+        elif eq == 'CP' and 'U' in data:
+            if U.shape[0] == U.shape[1]:
+                x0 = sps.linalg.spsolve(U,f)
+                error = np.linalg.norm(x0-x_split)
+                logging.info('Exact solution, error: %s' % error)
+            else:
+                x0 = sps.linalg.lsmr(U,f)[0]
+                error = np.linalg.norm(x0-x_split)
+                logging.info('lsmr solution, error: %s' % error)
+        else:
+            x0 = np.array(block_e(block_sizes - 1, block_sizes))
+        return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0)
     return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index)
 
 def AN(A,N):

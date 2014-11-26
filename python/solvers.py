@@ -48,17 +48,17 @@ def stopping(g,fx,i,t,d=None,delta_g=None,options=None,TOLER=1e-6):
     norm2_nabla_f = np.square(la.norm(g))
     thresh = TOLER * (1 + abs(fx))
     if options and 'verbose' in options and options['verbose'] >= 1 and i % 20 == 0:
-        logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
+        logging.debug("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
     if norm2_nabla_f <= thresh:
         logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
-        logging.debug('Exiting... norm(grad) too small')
+        logging.warning('Exiting... norm(grad) too small')
         return True
     if type(d) != type(None) and la.norm(t*d) <= 1e-12:
         logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
-        logging.debug('Exiting... step too small')
+        logging.warning('Exiting... step too small')
         return True
     if type(delta_g) != type(None) and la.norm(delta_g) == 0:
         logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
-        logging.debug('Exiting... no change in gradient')
+        logging.warning('Exiting... no change in gradient')
         return True
     return False

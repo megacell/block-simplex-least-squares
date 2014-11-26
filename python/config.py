@@ -1,6 +1,6 @@
 ACCEPTED_LOG_LEVELS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'WARN']
 DATA_DIR = '/home/lei/traffic/datasets/Phi'
-EXPERIMENT_MATRICES_DIR = 'experiment_matrices/AllLink'
+EXPERIMENT_MATRICES_DIR = 'hierarchy/experiment_matrices'
 ALL_LINK_DIR = 'AllLinks'
 ESTIMATION_INFO_DIR = 'estimation_info'
 PLOT_DIR = DATA_DIR + '/plots'

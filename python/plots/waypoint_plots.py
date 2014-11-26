@@ -100,7 +100,7 @@ def plot_routes_vs_error(plot, correction = lambda x, y: x):
     pyplot.ylabel('Route Flow Percent Error')
     pyplot.ylim([0,5])
 
-plot_waypoint_density_vs_error2(pyplot.semilogy)
+plot_waypoint_density_vs_error(pyplot.semilogy)
 pyplot.title('MATSim route flow error from cell + OD data \n(AM)',fontsize=22, weight='bold')
 pyplot.show()
 pyplot.close('all')

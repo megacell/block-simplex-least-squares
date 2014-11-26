@@ -24,6 +24,7 @@ def parser():
     parser.add_argument('--noise',dest='noise',type=float,default=None,
             help='Noise level')
     return parser
+
 def solve(z0, f, nabla_f, stopping, log, proj, options):
     preconditionoptions = { 'max_iter': 1000,
                 'verbose': 1,
@@ -176,7 +177,7 @@ if __name__ == "__main__":
         matrix_dir = "{0}/{1}".format(c.EXPERIMENT_MATRICES_DIR, d)
         print matrix_dir
         for i in reversed([50,40,30,20,10,3]):
-            infile = "%s/experiment2_all_link_matrices_routes_%s.mat" % (d,i)
+            infile = "%s/experiment2_waypoints_matrices_routes_%s.mat" % (d,i)
             x, fx = main(infile)
             outputfile = "%s/%s/output_waypoints%s.mat" % (c.DATA_DIR, matrix_dir, i)
             sio.savemat(outputfile, {'x':x,'fx':fx})

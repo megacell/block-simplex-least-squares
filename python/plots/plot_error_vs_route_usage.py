@@ -8,7 +8,7 @@ import os
 from scipy.sparse.linalg import LinearOperator
 import scipy.linalg.interpolative as inter
 import pickle
-BASE_DIR = '%s/%s'%(config.PLOT_DIR, config.EXPERIMENT_MATRICES_DIR)
+BASE_DIR = '%s/%s'%(config.DATA_DIR, config.EXPERIMENT_MATRICES_DIR)
 b_50 = None
 def b_estimate():
     global b_50
@@ -64,12 +64,12 @@ def get_statistics_from(solution_file, problem_file):
     print problem_file, solution_file
     A, x, b, N, block_size, flow= read_problem_matrices(problem_file)
 
-    print(A.shape)
-    print N.shape
+    #print(A.shape)
+    #print N.shape
     x_hat, fx = read_x_computed(solution_file,block_size, N)
     geh = metrics(A, b, x_hat)
-    print flowerror_larger_than(x_hat, x, flow,25)
-    geh['flow_per_error'] = flowerror_larger_than(x_hat, x, flow,25)
+    print flowerror(x_hat, x, flow)
+    geh['flow_per_error'] = flowerror(x_hat, x, flow)
     return geh
 
 def plot_GEH(routes, GEH, errorstat, xlabel, ylabel):
@@ -125,7 +125,7 @@ def read_ranks(density):
     return [rank(A,U) for A, U in [readAU(f) for f in mf]]
 if __name__== '__main__':
     density = config.WAYPOINT_DENSITIES
-    stats = {d:plot_GEH_vs_route_number_waypoints("{0}/{1}".format(BASE_DIR,d), "{0}/{1}".format(config.PLOT_DIR, d)) for d in density}
+    stats = {d:plot_GEH_vs_route_number_waypoints("{0}/{1}".format(BASE_DIR,d), "{0}/{1}".format(config.DATA_DIR, d)) for d in density}
     pickle.dump(stats, open(config.PLOT_DIR +'/stats.pkl','w'))
     #read_ranks(3800)
     #print(read_ranks(density[0]))

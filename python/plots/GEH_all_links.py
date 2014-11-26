@@ -128,4 +128,4 @@ def plot_routes_vs_geh(waypoint_density):
     pyplot.yticks(fontsize=18)
     pyplot.show()
 
-plot_routes_vs_geh(3800)
+plot_routes_vs_geh(950)

@@ -1,4 +1,4 @@
-config.py
+python/config.py
 
 *.m~
 *.mat

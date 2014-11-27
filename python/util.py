@@ -32,6 +32,9 @@ def remove_zero_rows(M,x):
     nz = array(M.sum(axis=1).nonzero()[0])
     return M[nz,:], x[nz]
 
+def row(M,m):
+    return M.tocsr()[m,:].tocoo()
+
 def col(M,m):
     return M.tocsc()[:,m].tocoo()
 
@@ -150,7 +153,7 @@ def EQ_block_sort(EQ,x,M):
     rsort_index = np.argsort(sort_index) # revert sort
     return (EQ,x,M,block_sizes,rsort_index)
 
-def EQ_block_scale(EQ,EQx,x,M,m):
+def EQ_block_scale(EQ,EQx,x,M,m, thresh=1e-30):
     """
     Removes zero _blocks_ and scales matrices by block flow, given by EQ
 
@@ -163,16 +166,18 @@ def EQ_block_scale(EQ,EQx,x,M,m):
     :return:
     """
     scaling =  EQ.T.dot(EQ.dot(x))
-    nz = scaling.nonzero()[0]
+    nz = (scaling > thresh).nonzero()[0]
     x_split = np.nan_to_num(x / scaling)[nz]
     scaling = scaling[nz]
     DEQ = sps.diags([scaling],[0])
     M, m = remove_zero_rows(col(M,nz).dot(DEQ),m)
     EQ,EQx = remove_zero_rows(col(EQ,nz).dot(DEQ),EQx)
-    assert la.norm(EQ.dot(x_split) - EQx) < 1e-8, 'Improper scaling: EQx != EQx'
+    assert la.norm(EQ.dot(x_split) - EQx) < 1e-10,\
+        'Improper scaling: EQx != EQx, norm: %s' % la.norm(EQ.dot(x_split) - EQx)
     return (EQ,EQx,x_split,M,m,scaling)
 
-def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,init=False):
+def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
+              init=False,thresh=1e-5):
     """
     Load data from file about network state
 
@@ -212,7 +217,8 @@ def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,init=False)
     nz = [i for i in xrange(A.shape[0]) if A[i,:].nnz == 0]
     nnz = [i for i in xrange(A.shape[0]) if A[i,:].nnz > 0]
     A, b = A[nnz,:], b[nnz]
-    assert la.norm(A.dot(x_true) - b) < 1e-8, 'Check data input: Ax != b'
+    assert la.norm(A.dot(x_true) - b) < thresh,\
+        'Check data input: Ax != b, norm: %s' % la.norm(A.dot(x_true) - b)
 
     n = x_true.shape[0]
     # OD-route
@@ -258,7 +264,9 @@ def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,init=False)
         scaling = array(A.sum(axis=0)/(A > 0).sum(axis=0))
         scaling[np.isnan(scaling)]=0 # FIXME this is not accurate
         AA,bb = A,b
-    assert la.norm(AA.dot(x_split) - bb) < 1e-8, 'Improper scaling: AAx != bb'
+    ipdb.set_trace()
+    assert la.norm(AA.dot(x_split) - bb) < thresh,\
+        'Improper scaling: AAx != bb, norm: %s' % la.norm(AA.dot(x_split) - bb)
 
     logging.debug('Creating sparse N matrix')
     N = block_sizes_to_N(block_sizes)
@@ -415,7 +423,7 @@ def assert_simplex_incidence(M,n):
         'Incidence matrix: columns should sum to 1'
     assert M.nnz == n, 'Incidence matrix: should be n nonzero values'
 
-def assert_scaled_incidence(M):
+def assert_scaled_incidence(M,thresh=1e-12):
     """
     Check that all column entries are either 0 or the same entry value
 
@@ -427,7 +435,7 @@ def assert_scaled_incidence(M):
     col_nz = (M > 0).sum(axis=0)
     entry_val = np.array([0 if M[:,i].nonzero()[0].size == 0 else \
                               M[M[:,i].nonzero()[0][0],i] for i in range(n)])
-    assert (np.abs(array(col_sum) - array(col_nz) * entry_val) < 1e-10).all(), \
+    assert (np.abs(array(col_sum) - array(col_nz) * entry_val) < thresh).all(), \
         'Not a proper scaled incidence matrix, check column entries'
 
 if __name__ == "__main__":

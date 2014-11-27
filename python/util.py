@@ -22,6 +22,19 @@ L_BFGS = 'L-BFGS'
 SPG = 'SPG'
 ADMM = 'ADMM'
 
+# Convenience functions
+# -----------------------------------------------------------------------------
+
+def is_sparse_matrix(A):
+    return not sps.sputils.isdense(A)
+
+def remove_zero_rows(M,x):
+    nz = array(M.sum(axis=1).nonzero()[0])
+    return M[nz,:], x[nz]
+
+def col(M,m):
+    return M.tocsc()[:,m].tocoo()
+
 # Clean array wrapper
 def array(x):
     return np.squeeze(np.array(x))
@@ -50,16 +63,19 @@ def e(i,n, val=1):
 def block_e(I,N):
     return np.squeeze(np.vstack([e(i,n) for (i,n) in zip(I,N)]))
 
-def J():
-    # TODO
-    pass
-
 def block_J(Js):
     return block_diag(Js)
 
 def get_block_sizes(U):
     # Sum along rows
     return array((U>0).sum(axis=1)).astype(int)
+
+def block_sizes_to_x0(block_sizes):
+    """Converts a list of the block sizes to a scipy.sparse vector x0
+    """
+    x0 = sps.dok_matrix((np.sum(block_sizes),1))
+    for i in np.cumsum(block_sizes)-1: x0[(i,0)] = 1
+    return x0.transpose()
 
 def block_sizes_to_N(block_sizes):
     """Converts a list of the block sizes to a scipy.sparse matrix.
@@ -86,18 +102,22 @@ def block_sizes_to_N(block_sizes):
         start_col += block_size - 1
     return sparse(N)
 
-def block_sizes_to_x0(block_sizes):
-    """Converts a list of the block sizes to a scipy.sparse vector x0
+def x2z(x, block_sizes):
     """
-    x0 = sps.dok_matrix((np.sum(block_sizes),1))
-    for i in np.cumsum(block_sizes)-1: x0[(i,0)] = 1
-    return x0.transpose()
+    Convert x (original splits) to z variable (eliminated eq constraint)
+    :param x:
+    :param block_sizes:
+    :return:
+    """
+    p = len(block_sizes)
+    ind_end = np.cumsum(block_sizes)
+    ind_start = np.hstack(([0],ind_end[:-1]))
+    z = np.concatenate([np.cumsum(x[i:j-1]) for i,j \
+                        in zip(ind_start,ind_end) if i<j-1])
+    return z
 
-# Convenience functions
+# Helper functions
 # -----------------------------------------------------------------------------
-
-def is_sparse_matrix(A):
-    return not sps.sputils.isdense(A)
 
 def load_weights(filename,block_sizes,weight=1):
     import pickle
@@ -111,40 +131,7 @@ def load_weights(filename,block_sizes,weight=1):
     blocks = [b/sum(b) for b in blocks]
     return weight*np.array([e for b in blocks for e in b])
 
-def assert_simplex_incidence(M,n):
-    """
-    1. Check that the width of the matrix is correct.
-    2. Check that each column sums to 1
-    3. Check that there are exactly n nonzero values
-    :param M:
-    :param n:
-    :return:
-    """
-    assert M.shape[1] == n, 'Incidence matrix: wrong size'
-    assert (M.sum(axis=0)-1).any() == False,\
-        'Incidence matrix: columns should sum to 1'
-    assert M.nnz == n, 'Incidence matrix: should be n nonzero values'
-
-def assert_scaled_incidence(M):
-    """
-    Check that all column entries are either 0 or the same entry value
-
-    :param M:
-    :return:
-    """
-    m,n = M.shape
-    col_sum = M.sum(axis=0)
-    col_nz = (M > 0).sum(axis=0)
-    entry_val = np.array([0 if M[:,i].nonzero()[0].size == 0 else \
-                              M[M[:,i].nonzero()[0][0],i] for i in range(n)])
-    assert (np.abs(array(col_sum) - array(col_nz) * entry_val) < 1e-10).all(), \
-        'Not a proper scaled incidence matrix, check column entries'
-
-def remove_zero_rows(M,x):
-    nz = array(M.sum(axis=1).nonzero()[0])
-    return M[nz,:], x[nz]
-
-def EQ_block_sort(EQ,A,x,M=None):
+def EQ_block_sort(EQ,x,M):
     """
     Reorder columns by blocks of flow, given by EQ, e.g. OD flow or waypoint flow
 
@@ -157,16 +144,13 @@ def EQ_block_sort(EQ,A,x,M=None):
     block_sizes = get_block_sizes(EQ)
     rank = EQ.nonzero()[0]
     sort_index = np.argsort(rank)
-    A = A[:,sort_index] # reorder
+    M = col(M,sort_index)
     x = x[sort_index] # reorder
-    EQ = EQ[:,sort_index]
+    EQ = col(EQ,sort_index)
     rsort_index = np.argsort(sort_index) # revert sort
-    if M is not None:
-        M = M[:,sort_index]
-        return (EQ,A,x,block_sizes,rsort_index,M)
-    return (EQ,A,x,block_sizes,rsort_index)
+    return (EQ,x,M,block_sizes,rsort_index)
 
-def EQ_block_scale(EQ,EQx,A,x,M=None,m=None):
+def EQ_block_scale(EQ,EQx,x,M,m):
     """
     Removes zero _blocks_ and scales matrices by block flow, given by EQ
 
@@ -183,16 +167,12 @@ def EQ_block_scale(EQ,EQx,A,x,M=None,m=None):
     x_split = np.nan_to_num(x / scaling)[nz]
     scaling = scaling[nz]
     DEQ = sps.diags([scaling],[0])
-    A = A[:,nz].dot(DEQ)
-    EQ,EQx = remove_zero_rows(EQ[:,nz].dot(DEQ),EQx)
+    M, m = remove_zero_rows(col(M,nz).dot(DEQ),m)
+    EQ,EQx = remove_zero_rows(col(EQ,nz).dot(DEQ),EQx)
     assert la.norm(EQ.dot(x_split) - EQx) < 1e-8, 'Improper scaling: EQx != EQx'
-    if M is not None and m is not None:
-        M, m = remove_zero_rows(M[:,nz].dot(DEQ),m)
-        return (EQ,EQx,A,x_split,scaling,M,m)
-    return (EQ,EQx,A,x_split,scaling)
+    return (EQ,EQx,x_split,M,m,scaling)
 
-
-def load_data(filename,full=False,OD=False,CP=False,eq=None,init=False):
+def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,init=False):
     """
     Load data from file about network state
 
@@ -243,45 +223,48 @@ def load_data(filename,full=False,OD=False,CP=False,eq=None,init=False):
     if CP and 'U' in data and 'f' in data:
         U,f = sparse(data['U']), array(data['f'])
         assert_simplex_incidence(U, n) # ASSERT
+    # Linkpath-route
+    if LP and 'V' in data and 'e' in data:
+        V,e = sparse(data['V']), array(data['e'])
 
     # Process equality constraints: scale by block, remove zero blocks, reorder
+    AA,bb = A,b # Link constraints
+    # Link-path constraints
+    if LP and 'V' in data:
+        AA,bb = sps.vstack([AA,V]), np.concatenate((bb,e))
+        logging.info('V: (%s,%s)' % (V.shape))
+
     if eq == 'OD' and 'T' in data:
         if CP and 'U' in data:
-            T,d,A,x_split,scaling,U,f = EQ_block_scale(T,d,A,x_true,M=U,m=f)
-            T,A,x_split,block_sizes,rsort_index,U = EQ_block_sort(T,A,x_split,M=U)
-            AA,bb = sps.vstack([A,U]), np.concatenate((b,f))
+            AA,bb = sps.vstack([AA,U]), np.concatenate((bb,f))
+            logging.info('T: %s, U: %s' % (T.shape, U.shape))
         else:
-            T, d, A, x_split,scaling = EQ_block_scale(T,d,A,x_true)
-            T,A,x_split,block_sizes,rsort_index = EQ_block_sort(T,A,x_split)
-            AA,bb = A,b
+            logging.info('T: (%s,%s)' % (T.shape))
+        T,d,x_split,AA,bb,scaling = EQ_block_scale(T,d,x_true,AA,bb)
+        T,x_split,AA,block_sizes,rsort_index = EQ_block_sort(T,x_split,AA)
     elif eq == 'CP' and 'U' in data:
         if OD and 'T' in data:
-            U,f,A,x_split,scaling,T,d = EQ_block_scale(U,f,A,x_true,M=T,m=d)
-            U,A,x_split,block_sizes,rsort_index,T = EQ_block_sort(U,A,x_split,M=T)
-            AA,bb = sps.vstack([A,T]), np.concatenate((b,d))
+            AA,bb = sps.vstack([AA,T]), np.concatenate((bb,d))
+            logging.info('T: %s, U: %s' % (T.shape, U.shape))
         else:
-            U, f, A, x_split, scaling = EQ_block_scale(U,f,A,x_true)
-            U,A,x_split,block_sizes,rsort_index = EQ_block_sort(U,A,x_split)
-            AA,bb = A,b
-    else:
+            logging.info('U: (%s,%s)' % (U.shape))
+        U,f,x_split,AA,bb,scaling = EQ_block_scale(U,f,x_true,AA,bb)
+        U,x_split,AA,block_sizes,rsort_index = EQ_block_sort(U,x_split,AA)
+    else: # assume already sorted by blocks
+        logging.warning('Use of deprecate clause')
         # TODO DEPRECATE
         x_split = x_true
         # TODO what is going on here????
         scaling = array(A.sum(axis=0)/(A > 0).sum(axis=0))
         scaling[np.isnan(scaling)]=0 # FIXME this is not accurate
         AA,bb = A,b
-    if 'T' in data:
-        assert la.norm(T.dot(x_split) - d) < 1e-8, 'Improper scaling: Tx != d'
-    if 'U' in data:
-        assert la.norm(U.dot(x_split) - f) < 1e-8, 'Improper scaling: Ux != f'
-    assert la.norm(A.dot(x_split) - b) < 1e-8, 'Improper scaling: Ax != b'
     assert la.norm(AA.dot(x_split) - bb) < 1e-8, 'Improper scaling: AAx != bb'
 
     logging.debug('Creating sparse N matrix')
     N = block_sizes_to_N(block_sizes)
 
-    logging.info('A : %s, blocks: %s' % (A.shape, block_sizes.shape))
-    logging.info('T : %s, U: %s' % (T.shape, U.shape))
+    logging.info('AA : %s, A : %s, blocks: %s' % (AA.shape, A.shape,
+                                                  block_sizes.shape))
 
     logging.debug('File loaded successfully')
     if init:
@@ -368,14 +351,6 @@ def timer(func, number= 1):
     return output, total / number
 
 
-def x2z(x, block_sizes):
-    p = len(block_sizes)
-    ind_end = np.cumsum(block_sizes)
-    ind_start = np.hstack(([0],ind_end[:-1]))
-    z = np.concatenate([np.cumsum(x[i:j-1]) for i,j \
-                in zip(ind_start,ind_end) if i<j-1])
-    return z
-
 
 def init_xz(block_sizes, x_true):
     """Generate initial points
@@ -422,6 +397,38 @@ def mask(arr):
     for i in range(k):
         masked[:len(arr[i]),i] = np.array(arr[i])
     return masked
+
+# Assert functions
+# -----------------------------------------------------------------------------
+
+def assert_simplex_incidence(M,n):
+    """
+    1. Check that the width of the matrix is correct.
+    2. Check that each column sums to 1
+    3. Check that there are exactly n nonzero values
+    :param M:
+    :param n:
+    :return:
+    """
+    assert M.shape[1] == n, 'Incidence matrix: wrong size'
+    assert (M.sum(axis=0)-1).any() == False, \
+        'Incidence matrix: columns should sum to 1'
+    assert M.nnz == n, 'Incidence matrix: should be n nonzero values'
+
+def assert_scaled_incidence(M):
+    """
+    Check that all column entries are either 0 or the same entry value
+
+    :param M:
+    :return:
+    """
+    m,n = M.shape
+    col_sum = M.sum(axis=0)
+    col_nz = (M > 0).sum(axis=0)
+    entry_val = np.array([0 if M[:,i].nonzero()[0].size == 0 else \
+                              M[M[:,i].nonzero()[0][0],i] for i in range(n)])
+    assert (np.abs(array(col_sum) - array(col_nz) * entry_val) < 1e-10).all(), \
+        'Not a proper scaled incidence matrix, check column entries'
 
 if __name__ == "__main__":
     x = np.array([1/6.,2/6.,3/6.,1,.5,.1,.4])

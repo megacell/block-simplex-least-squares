@@ -5,7 +5,6 @@ import scipy.sparse.linalg
 import scipy.sparse.linalg as sla
 import numpy as np
 import numpy.linalg as la
-import scipy.io as sio
 from scipy.linalg import block_diag
 import scipy.sparse as sps
 import sys
@@ -176,6 +175,15 @@ def EQ_block_scale(EQ,EQx,x,M,m, thresh=1e-30):
         'Improper scaling: EQx != EQx, norm: %s' % la.norm(EQ.dot(x_split) - EQx)
     return (EQ,EQx,x_split,M,m,scaling)
 
+def load(filename, A=False, b=False, x_true=False):
+    data = sio.loadmat(filename)
+    if A:
+        return sparse(data['A'])
+    if b:
+        return array(data['b'])
+    if x_true:
+        return array(data['x_true'])
+
 def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
               init=False,thresh=1e-5):
     """
@@ -248,6 +256,8 @@ def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
             logging.info('T: (%s,%s)' % (T.shape))
         T,d,x_split,AA,bb,scaling = EQ_block_scale(T,d,x_true,AA,bb)
         T,x_split,AA,block_sizes,rsort_index = EQ_block_sort(T,x_split,AA)
+        assert la.norm(T.dot(x_split) - d) < thresh, \
+            'Check eq constraint Tx != d, norm: %s' % la.norm(T.dot(x_split)-d)
     elif eq == 'CP' and 'U' in data:
         if OD and 'T' in data:
             AA,bb = sps.vstack([AA,T]), np.concatenate((bb,d))
@@ -256,6 +266,8 @@ def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
             logging.info('U: (%s,%s)' % (U.shape))
         U,f,x_split,AA,bb,scaling = EQ_block_scale(U,f,x_true,AA,bb)
         U,x_split,AA,block_sizes,rsort_index = EQ_block_sort(U,x_split,AA)
+        assert la.norm(U.dot(x_split) - f) < thresh, \
+            'Check eq constraint Ux != f, norm: %s' % la.norm(U.dot(x_split)-f)
     else: # assume already sorted by blocks
         logging.warning('Use of deprecate clause')
         # TODO DEPRECATE
@@ -264,7 +276,6 @@ def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
         scaling = array(A.sum(axis=0)/(A > 0).sum(axis=0))
         scaling[np.isnan(scaling)]=0 # FIXME this is not accurate
         AA,bb = A,b
-    ipdb.set_trace()
     assert la.norm(AA.dot(x_split) - bb) < thresh,\
         'Improper scaling: AAx != bb, norm: %s' % la.norm(AA.dot(x_split) - bb)
 

@@ -1,7 +1,5 @@
 import numpy as np
-import scipy.sparse
 from numpy import linalg as la
-import random
 import time
 import logging
 
@@ -83,7 +81,7 @@ def solve(x0, linop, linop_T, target, record_every=5, proj=None,
         if iter_ % record_every == 0:
             start = log(iter_,x,time.time()-start)
         if options and 'verbose' in options and options['verbose'] >= 1 and \
-                iter_ % 20 == 0:
+                iter_ % 100 == 0:
             logging.debug("iter=%d: %e %e %e" % (iter_,err.dot(err),norm_change,
                 la.norm(x)))
 

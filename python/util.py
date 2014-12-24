@@ -184,7 +184,7 @@ def load(filename, A=False, b=False, x_true=False):
     if x_true:
         return array(data['x_true'])
 
-def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
+def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
               init=False,thresh=1e-5):
     """
     Load data from file about network state
@@ -201,10 +201,6 @@ def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
                 T to generate equality constraint; CP uses U
     :return:
     """
-    logging.debug('Loading %s...' % filename)
-    data = sio.loadmat(filename)
-    logging.debug('Unpacking...')
-
     # Link-route and route
     # FIXME deprecate use of key 'x'
     if full and 'A_full' in data and 'b_full' in data and 'x_true' in data:
@@ -225,7 +221,7 @@ def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
     nz = [i for i in xrange(A.shape[0]) if A[i,:].nnz == 0]
     nnz = [i for i in xrange(A.shape[0]) if A[i,:].nnz > 0]
     A, b = A[nnz,:], b[nnz]
-    assert la.norm(A.dot(x_true) - b) < thresh,\
+    assert la.norm(A.dot(x_true) - b) < thresh, \
         'Check data input: Ax != b, norm: %s' % la.norm(A.dot(x_true) - b)
 
     n = x_true.shape[0]
@@ -238,14 +234,14 @@ def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
         U,f = sparse(data['U']), array(data['f'])
         assert_simplex_incidence(U, n) # ASSERT
     # Linkpath-route
-    if LP and 'V' in data and 'e' in data:
-        V,e = sparse(data['V']), array(data['e'])
+    if LP and 'V' in data and 'g' in data:
+        V,g = sparse(data['V']), array(data['g'])
 
     # Process equality constraints: scale by block, remove zero blocks, reorder
     AA,bb = A,b # Link constraints
     # Link-path constraints
     if LP and 'V' in data:
-        AA,bb = sps.vstack([AA,V]), np.concatenate((bb,e))
+        AA,bb = sps.vstack([AA,V]), np.concatenate((bb,g))
         logging.info('V: (%s,%s)' % (V.shape))
 
     if eq == 'OD' and 'T' in data:
@@ -276,7 +272,7 @@ def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
         scaling = array(A.sum(axis=0)/(A > 0).sum(axis=0))
         scaling[np.isnan(scaling)]=0 # FIXME this is not accurate
         AA,bb = A,b
-    assert la.norm(AA.dot(x_split) - bb) < thresh,\
+    assert la.norm(AA.dot(x_split) - bb) < thresh, \
         'Improper scaling: AAx != bb, norm: %s' % la.norm(AA.dot(x_split) - bb)
 
     logging.debug('Creating sparse N matrix')
@@ -307,8 +303,36 @@ def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
                 logging.info('lsmr solution, error: %s' % error)
         else:
             x0 = np.array(block_e(block_sizes - 1, block_sizes))
-        return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0)
-    return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index)
+    else:
+        x0 = np.array(block_e(block_sizes - 1, block_sizes))
+
+    return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0)
+
+def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
+              init=False,thresh=1e-5):
+    """
+    Load data from file about network state
+
+    Notation:
+    x_true = route flow
+    x_split = route split
+
+    :param filename:
+    :param full: Use A_full, b_full instead of A,b
+    :param OD: Extract information from T
+    :param CP: Extract information from U
+    :param eq: None uses block_sizes to generate equality constraint; OD uses
+                T to generate equality constraint; CP uses U
+    :return:
+    """
+    logging.debug('Loading %s...' % filename)
+    data = sio.loadmat(filename)
+    logging.debug('Unpacking...')
+
+    AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0 = \
+        solver_input(data,full=full,OD=OD,CP=CP,LP=LP,eq=eq,init=init,
+                     thresh=thresh)
+    return AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index
 
 def AN(A,N):
     # TODO port from preADMM.m (lines 3-21)

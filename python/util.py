@@ -31,6 +31,10 @@ def remove_zero_rows(M,x):
     nz = array(M.sum(axis=1).nonzero()[0])
     return M[nz,:], x[nz]
 
+def remove_zero_cols(M,x):
+    nz = array(M.sum(axis=0).nonzero()[1])
+    return M[:,nz], x[nz]
+
 def row(M,m):
     return M.tocsr()[m,:].tocoo()
 
@@ -39,7 +43,7 @@ def col(M,m):
 
 # Clean array wrapper
 def array(x):
-    return np.squeeze(np.array(x))
+    return np.atleast_1d(np.squeeze(np.array(x)))
 
 # Clean sparse matrix wrapper
 def sparse(A):
@@ -63,7 +67,7 @@ def e(i,n, val=1):
 
 # Returns a vector with blocks of e, given a vector of sizes N and positions I
 def block_e(I,N):
-    return np.squeeze(np.vstack([e(i,n) for (i,n) in zip(I,N)]))
+    return array(np.vstack([e(i,n) for (i,n) in zip(I,N)]))
 
 def block_J(Js):
     return block_diag(Js)
@@ -86,7 +90,7 @@ def block_sizes_to_N(block_sizes):
     but can easily be converted to another format such as csr for efficient multiplication.
     I will return it in csr so that each function doesn't need to convert it itself.
     """
-    block_sizes = np.squeeze(np.asarray(block_sizes))
+    block_sizes = array(block_sizes)
     m = np.sum(block_sizes)
     n = m - block_sizes.shape[0]
     N = sps.lil_matrix((m, n))
@@ -150,7 +154,7 @@ def EQ_block_sort(EQ,x,M):
     x = x[sort_index] # reorder
     EQ = col(EQ,sort_index)
     rsort_index = np.argsort(sort_index) # revert sort
-    return (EQ,x,M,block_sizes,rsort_index)
+    return (EQ.tocsr(),x,M.tocsr(),block_sizes,rsort_index)
 
 def EQ_block_scale(EQ,EQx,x,M,m, thresh=1e-30):
     """
@@ -173,7 +177,24 @@ def EQ_block_scale(EQ,EQx,x,M,m, thresh=1e-30):
     EQ,EQx = remove_zero_rows(col(EQ,nz).dot(DEQ),EQx)
     assert la.norm(EQ.dot(x_split) - EQx) < 1e-10,\
         'Improper scaling: EQx != EQx, norm: %s' % la.norm(EQ.dot(x_split) - EQx)
-    return (EQ,EQx,x_split,M,m,scaling)
+    return (EQ.tocsr(),EQx,x_split,M.tocsr(),m,scaling)
+
+def direct_solve(M,m,x_split=None):
+    if M.shape[0] == M.shape[1]:
+        if M.size == 1:
+            x0 = array(m[0] / M[0,0]) if m[0] != 0 else 0
+        else:
+            x0 = sps.linalg.spsolve(M,m)
+        if x_split is not None:
+            error = np.linalg.norm(x0-x_split)
+            logging.info('Exact solution, error: %s' % error)
+    else:
+        x0 = sps.linalg.lsmr(M,m)[0]
+        if x_split is not None:
+            error = np.linalg.norm(x0-x_split)
+            logging.info('lsmr solution, error: %s' % error)
+    return x0
+
 
 def load(filename, A=False, b=False, x_true=False):
     data = sio.loadmat(filename)
@@ -207,10 +228,18 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
         x_true = array(data['x_true'])
         A = sparse(data['A_full'])
         b = array(data['b_full'])
+        if len(data['A'].shape) == 1:
+            A = A.T
+        if len(x_true.shape) == 0:
+            x_true = x_true.reshape((x_true.size))
     elif 'A' in data and 'b' in data:
         x_true = array(data['x_true'])
         A = sparse(data['A'])
         b = array(data['b'])
+        if len(data['A'].shape) == 1:
+            A = A.T
+        if len(x_true.shape) == 0:
+            x_true = x_true.reshape((x_true.size))
     elif 'phi' in data and 'b' in data and 'real_a' in data:
         x_true = array(data['real_a'])
         A = sparse(data['phi'])
@@ -241,12 +270,12 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
     AA,bb = A,b # Link constraints
     # Link-path constraints
     if LP and 'V' in data:
-        AA,bb = sps.vstack([AA,V]), np.concatenate((bb,g))
+        AA,bb = sps.vstack([AA,V]), np.append(bb,g)
         logging.info('V: (%s,%s)' % (V.shape))
 
     if eq == 'OD' and 'T' in data:
         if CP and 'U' in data:
-            AA,bb = sps.vstack([AA,U]), np.concatenate((bb,f))
+            AA,bb = sps.vstack([AA,U]), np.append(bb,f)
             logging.info('T: %s, U: %s' % (T.shape, U.shape))
         else:
             logging.info('T: (%s,%s)' % (T.shape))
@@ -256,7 +285,7 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
             'Check eq constraint Tx != d, norm: %s' % la.norm(T.dot(x_split)-d)
     elif eq == 'CP' and 'U' in data:
         if OD and 'T' in data:
-            AA,bb = sps.vstack([AA,T]), np.concatenate((bb,d))
+            AA,bb = sps.vstack([AA,T]), np.append(bb,d)
             logging.info('T: %s, U: %s' % (T.shape, U.shape))
         else:
             logging.info('U: (%s,%s)' % (U.shape))
@@ -265,7 +294,7 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
         assert la.norm(U.dot(x_split) - f) < thresh, \
             'Check eq constraint Ux != f, norm: %s' % la.norm(U.dot(x_split)-f)
     else: # assume already sorted by blocks
-        logging.warning('Use of deprecate clause')
+        logging.warning('Use of deprecated clause')
         # TODO DEPRECATE
         x_split = x_true
         # TODO what is going on here????
@@ -284,23 +313,9 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
     logging.debug('File loaded successfully')
     if init:
         if eq == 'OD' and 'T' in data:
-            if T.shape[0] == T.shape[1]:
-                x0 = sps.linalg.spsolve(T,d)
-                error = np.linalg.norm(x0-x_split)
-                logging.info('Exact solution, error: %s' % error)
-            else:
-                x0 = sps.linalg.lsmr(T,d)[0]
-                error = np.linalg.norm(x0-x_split)
-                logging.info('lsmr solution, error: %s' % error)
+            x0 = direct_solve(T,d,x_split=x_split)
         elif eq == 'CP' and 'U' in data:
-            if U.shape[0] == U.shape[1]:
-                x0 = sps.linalg.spsolve(U,f)
-                error = np.linalg.norm(x0-x_split)
-                logging.info('Exact solution, error: %s' % error)
-            else:
-                x0 = sps.linalg.lsmr(U,f)[0]
-                error = np.linalg.norm(x0-x_split)
-                logging.info('lsmr solution, error: %s' % error)
+            x0 = direct_solve(U,f,x_split=x_split)
         else:
             x0 = np.array(block_e(block_sizes - 1, block_sizes))
     else:

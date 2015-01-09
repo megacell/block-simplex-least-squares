@@ -47,6 +47,8 @@ def array(x):
 
 # Clean sparse matrix wrapper
 def sparse(A):
+    if A is None:
+        return None
     if type(A) == np.ndarray:
         return sps.csr_matrix(A)
     return A.tocsr()
@@ -205,6 +207,18 @@ def load(filename, A=False, b=False, x_true=False):
     if x_true:
         return array(data['x_true'])
 
+def has_OD(data,OD):
+    return OD and 'T' in data and 'd' in data and data['T'] is not None and \
+           data['d'] is not None
+
+def has_CP(data,CP):
+    return CP and 'U' in data and 'f' in data and data['U'] is not None and \
+           data['f'] is not None
+
+def has_LP(data,LP):
+    return LP and 'V' in data and 'g' in data and data['V'] is not None and \
+           data['g'] is not None
+
 def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
               init=False,thresh=1e-5):
     """
@@ -255,26 +269,27 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
 
     n = x_true.shape[0]
     # OD-route
-    if OD and 'T' in data and 'd' in data:
+    if has_OD(data,OD):
         T,d = sparse(data['T']), array(data['d'])
         assert_simplex_incidence(T, n) # ASSERT
     # Cellpath-route
-    if CP and 'U' in data and 'f' in data:
+    if has_CP(data,CP):
         U,f = sparse(data['U']), array(data['f'])
         assert_simplex_incidence(U, n) # ASSERT
     # Linkpath-route
-    if LP and 'V' in data and 'g' in data:
+    if has_LP(data,LP):
         V,g = sparse(data['V']), array(data['g'])
 
     # Process equality constraints: scale by block, remove zero blocks, reorder
     AA,bb = A,b # Link constraints
     # Link-path constraints
-    if LP and 'V' in data:
+    if has_LP(data,LP):
         AA,bb = sps.vstack([AA,V]), np.append(bb,g)
         logging.info('V: (%s,%s)' % (V.shape))
 
-    if eq == 'OD' and 'T' in data:
-        if CP and 'U' in data:
+    block_sizes, rsort_index = None, None
+    if eq == 'OD' and has_OD(data,OD):
+        if has_CP(data,CP):
             AA,bb = sps.vstack([AA,U]), np.append(bb,f)
             logging.info('T: %s, U: %s' % (T.shape, U.shape))
         else:
@@ -283,8 +298,8 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
         T,x_split,AA,block_sizes,rsort_index = EQ_block_sort(T,x_split,AA)
         assert la.norm(T.dot(x_split) - d) < thresh, \
             'Check eq constraint Tx != d, norm: %s' % la.norm(T.dot(x_split)-d)
-    elif eq == 'CP' and 'U' in data:
-        if OD and 'T' in data:
+    elif eq == 'CP' and has_CP(data,CP):
+        if has_OD(data,OD):
             AA,bb = sps.vstack([AA,T]), np.append(bb,d)
             logging.info('T: %s, U: %s' % (T.shape, U.shape))
         else:
@@ -305,16 +320,23 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
         'Improper scaling: AAx != bb, norm: %s' % la.norm(AA.dot(x_split) - bb)
 
     logging.debug('Creating sparse N matrix')
-    N = block_sizes_to_N(block_sizes)
+    if block_sizes is not None:
+        N = block_sizes_to_N(block_sizes)
+    else:
+        # In the case where there is no equality constraint, simply solve the
+        # objective via iterative method
+        N = None
+        x0 = sps.linalg.lsmr(AA,bb)[0]
+        return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0)
 
     logging.info('AA : %s, A : %s, blocks: %s' % (AA.shape, A.shape,
                                                   block_sizes.shape))
 
     logging.debug('File loaded successfully')
     if init:
-        if eq == 'OD' and 'T' in data:
+        if eq == 'OD' and has_OD(data,OD):
             x0 = direct_solve(T,d,x_split=x_split)
-        elif eq == 'CP' and 'U' in data:
+        elif eq == 'CP' and has_CP(data,CP):
             x0 = direct_solve(U,f,x_split=x_split)
         else:
             x0 = np.array(block_e(block_sizes - 1, block_sizes))

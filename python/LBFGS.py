@@ -22,8 +22,8 @@ def weak_wolfe_ls(x,d,f,nabla_f,proj=lambda x: x, c1=1e-3,c2=0.9):
         proj_xtd = proj(x + t*d)
 
         i += 1
-        if i >= 1000:
-            print np.abs(alpha-beta), t, alpha, beta
+        # if i >= 1000:
+        #     print np.abs(alpha-beta), t, alpha, beta
 
         # armijo condition violated
         if f(proj_xtd) >= f(proj_x) + c1 * t * d.dot(nabla_fx):

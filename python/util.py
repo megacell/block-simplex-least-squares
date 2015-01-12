@@ -238,6 +238,7 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
     """
     # Link-route and route
     # FIXME deprecate use of key 'x'
+    output = {}
     if full and 'A_full' in data and 'b_full' in data and 'x_true' in data:
         x_true = array(data['x_true'])
         A = sparse(data['A_full'])
@@ -259,6 +260,9 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
         A = sparse(data['phi'])
         b = array(data['b'])
     assert_scaled_incidence(A)
+    if 'b_full' in data:
+        output['nAllLinks'] = array(data['b_full']).size
+    output['nLinks'] = b.size
 
     # Remove rows of zeros (unused sensors)
     nz = [i for i in xrange(A.shape[0]) if A[i,:].nnz == 0]
@@ -272,13 +276,16 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
     if has_OD(data,OD):
         T,d = sparse(data['T']), array(data['d'])
         assert_simplex_incidence(T, n) # ASSERT
+        output['nOD'] = d.size
     # Cellpath-route
     if has_CP(data,CP):
         U,f = sparse(data['U']), array(data['f'])
         assert_simplex_incidence(U, n) # ASSERT
+        output['nCP'] = f.size
     # Linkpath-route
     if has_LP(data,LP):
         V,g = sparse(data['V']), array(data['g'])
+        output['nLP'] = g.size
 
     # Process equality constraints: scale by block, remove zero blocks, reorder
     AA,bb = A,b # Link constraints
@@ -327,7 +334,7 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
         # objective via iterative method
         N = None
         x0 = sps.linalg.lsmr(AA,bb)[0]
-        return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0)
+        return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output)
 
     logging.info('AA : %s, A : %s, blocks: %s' % (AA.shape, A.shape,
                                                   block_sizes.shape))
@@ -343,7 +350,7 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
     else:
         x0 = np.array(block_e(block_sizes - 1, block_sizes))
 
-    return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0)
+    return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output)
 
 def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
               init=False,thresh=1e-5):
@@ -366,10 +373,10 @@ def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
     data = sio.loadmat(filename)
     logging.debug('Unpacking...')
 
-    AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0 = \
+    AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output = \
         solver_input(data,full=full,OD=OD,CP=CP,LP=LP,eq=eq,init=init,
                      thresh=thresh)
-    return AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index
+    return AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output
 
 def AN(A,N):
     # TODO port from preADMM.m (lines 3-21)

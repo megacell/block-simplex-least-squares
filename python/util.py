@@ -220,7 +220,7 @@ def has_LP(data,LP):
            data['g'] is not None
 
 def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
-              init=False,thresh=1e-5):
+              init=False,thresh=1e-5,solve=False,links=True,damp=0.0):
     """
     Load data from file about network state
 
@@ -239,6 +239,7 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
     # Link-route and route
     # FIXME deprecate use of key 'x'
     output = {}
+    A, b = None, None
     if full and 'A_full' in data and 'b_full' in data and 'x_true' in data:
         x_true = array(data['x_true'])
         A = sparse(data['A_full'])
@@ -247,7 +248,7 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
             A = A.T
         if len(x_true.shape) == 0:
             x_true = x_true.reshape((x_true.size))
-    elif 'A' in data and 'b' in data:
+    elif links and 'A' in data and 'b' in data:
         x_true = array(data['x_true'])
         A = sparse(data['A'])
         b = array(data['b'])
@@ -262,14 +263,17 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
     assert_scaled_incidence(A)
     if 'b_full' in data:
         output['nAllLinks'] = array(data['b_full']).size
-    output['nLinks'] = b.size
+    if b is not None:
+        output['nLinks'] = b.size
 
     # Remove rows of zeros (unused sensors)
-    nz = [i for i in xrange(A.shape[0]) if A[i,:].nnz == 0]
-    nnz = [i for i in xrange(A.shape[0]) if A[i,:].nnz > 0]
-    A, b = A[nnz,:], b[nnz]
-    assert la.norm(A.dot(x_true) - b) < thresh, \
-        'Check data input: Ax != b, norm: %s' % la.norm(A.dot(x_true) - b)
+    if A is not None:
+        nz = [i for i in xrange(A.shape[0]) if A[i,:].nnz == 0]
+        nnz = [i for i in xrange(A.shape[0]) if A[i,:].nnz > 0]
+        A, b = A[nnz,:], b[nnz]
+        assert la.norm(A.dot(x_true) - b) < thresh, \
+            'Check data input: Ax != b, norm: %s' % la.norm(A.dot(x_true) - b)
+    AA,bb = A,b # Link constraints
 
     n = x_true.shape[0]
     # OD-route
@@ -277,23 +281,33 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
         T,d = sparse(data['T']), array(data['d'])
         assert_simplex_incidence(T, n) # ASSERT
         output['nOD'] = d.size
+        if solve:
+            AA,bb = (T,d) if AA is None else (sps.vstack([AA,T]), np.append(bb,d))
     # Cellpath-route
     if has_CP(data,CP):
         U,f = sparse(data['U']), array(data['f'])
         assert_simplex_incidence(U, n) # ASSERT
         output['nCP'] = f.size
-    # Linkpath-route
+        if solve:
+            AA,bb = (U,f) if AA is None else (sps.vstack([AA,U]), np.append(bb,f))
+    # Linkpath-route + add to AA,bb
     if has_LP(data,LP):
         V,g = sparse(data['V']), array(data['g'])
         output['nLP'] = g.size
-
-    # Process equality constraints: scale by block, remove zero blocks, reorder
-    AA,bb = A,b # Link constraints
-    # Link-path constraints
-    if has_LP(data,LP):
-        AA,bb = sps.vstack([AA,V]), np.append(bb,g)
+        AA,bb = (V,g) if AA is None else (sps.vstack([AA,V]), np.append(bb,g))
         logging.info('V: (%s,%s)' % (V.shape))
 
+    if solve:
+        from scipy.sparse.linalg import lsqr
+        x, istop, itn, r1norm, r2norm, anorm, acond, arnorm, xnorm, var = \
+            lsqr(AA,bb,damp=damp)
+        output['istop'], output['init_iters'], output['r1norm'],\
+            output['r2norm'], output['anorm'], output['acond'], output['arnorm'],\
+            output['xnorm'], output['var'] = istop, itn, r1norm, r2norm, \
+                                             anorm, acond, arnorm, xnorm, var
+        return AA, bb, x, x_true, output
+
+    # Process equality constraints: scale by block, remove zero blocks, reorder
     block_sizes, rsort_index = None, None
     if eq == 'OD' and has_OD(data,OD):
         if has_CP(data,CP):

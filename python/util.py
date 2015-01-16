@@ -260,7 +260,8 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
         x_true = array(data['real_a'])
         A = sparse(data['phi'])
         b = array(data['b'])
-    assert_scaled_incidence(A)
+    if A is not None:
+        assert_scaled_incidence(A)
     if 'b_full' in data:
         output['nAllLinks'] = array(data['b_full']).size
     if b is not None:

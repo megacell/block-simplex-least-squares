@@ -219,8 +219,8 @@ def has_LP(data,LP):
     return LP and 'V' in data and 'g' in data and data['V'] is not None and \
            data['g'] is not None
 
-def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
-              init=False,thresh=1e-5,solve=False,links=True,damp=0.0):
+def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
+              init=False,thresh=1e-5,solve=False,damp=0.0):
     """
     Load data from file about network state
 
@@ -247,7 +247,7 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
         b = array(data['b_full'])
         if len(data['A'].shape) == 1:
             A = A.T
-    elif links and 'A' in data and 'b' in data:
+    elif L and 'A' in data and 'b' in data:
         A = sparse(data['A'])
         b = array(data['b'])
         if len(data['A'].shape) == 1:
@@ -373,7 +373,7 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
 
     return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output)
 
-def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
+def load_data(filename,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
               init=False,thresh=1e-5):
     """
     Load data from file about network state
@@ -395,7 +395,7 @@ def load_data(filename,full=False,OD=False,CP=False,LP=False,eq=None,
     logging.debug('Unpacking...')
 
     AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output = \
-        solver_input(data,full=full,OD=OD,CP=CP,LP=LP,eq=eq,init=init,
+        solver_input(data,full=full,L=L,OD=OD,CP=CP,LP=LP,eq=eq,init=init,
                      thresh=thresh)
     return AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output
 

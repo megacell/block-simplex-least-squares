@@ -239,25 +239,20 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
     # Link-route and route
     # FIXME deprecate use of key 'x'
     output = {}
+
+    # Load A,b if applicable
     A, b = None, None
-    if full and 'A_full' in data and 'b_full' in data and 'x_true' in data:
-        x_true = array(data['x_true'])
+    if full and 'A_full' in data and 'b_full' in data:
         A = sparse(data['A_full'])
         b = array(data['b_full'])
         if len(data['A'].shape) == 1:
             A = A.T
-        if len(x_true.shape) == 0:
-            x_true = x_true.reshape((x_true.size))
     elif links and 'A' in data and 'b' in data:
-        x_true = array(data['x_true'])
         A = sparse(data['A'])
         b = array(data['b'])
         if len(data['A'].shape) == 1:
             A = A.T
-        if len(x_true.shape) == 0:
-            x_true = x_true.reshape((x_true.size))
-    elif 'phi' in data and 'b' in data and 'real_a' in data:
-        x_true = array(data['real_a'])
+    elif 'phi' in data and 'b' in data:
         A = sparse(data['phi'])
         b = array(data['b'])
     if A is not None:
@@ -267,6 +262,14 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
     if b is not None:
         output['nLinks'] = b.size
 
+    # Load x_true
+    if 'x_true' in data:
+        x_true = array(data['x_true'])
+        if len(x_true.shape) == 0:
+            x_true = x_true.reshape((x_true.size))
+    elif 'real_a' in data:
+        x_true = array(data['real_a'])
+
     # Remove rows of zeros (unused sensors)
     if A is not None:
         nz = [i for i in xrange(A.shape[0]) if A[i,:].nnz == 0]
@@ -274,7 +277,7 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
         A, b = A[nnz,:], b[nnz]
         assert la.norm(A.dot(x_true) - b) < thresh, \
             'Check data input: Ax != b, norm: %s' % la.norm(A.dot(x_true) - b)
-    AA,bb = A,b # Link constraints
+    AA,bb = A,b # Link constraints (NOTE: might still be None)
 
     n = x_true.shape[0]
     # OD-route
@@ -297,6 +300,10 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
         output['nLP'] = g.size
         AA,bb = (V,g) if AA is None else (sps.vstack([AA,V]), np.append(bb,g))
         logging.info('V: (%s,%s)' % (V.shape))
+
+    if AA is None:
+        output['error'] = "AA,bb is empty"
+        return None,None,None,None,output
 
     if solve:
         from scipy.sparse.linalg import lsqr

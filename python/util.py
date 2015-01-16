@@ -301,10 +301,9 @@ def solver_input(data,full=False,OD=False,CP=False,LP=False,eq=None,
         from scipy.sparse.linalg import lsqr
         x, istop, itn, r1norm, r2norm, anorm, acond, arnorm, xnorm, var = \
             lsqr(AA,bb,damp=damp)
-        output['istop'], output['init_iters'], output['r1norm'],\
-            output['r2norm'], output['anorm'], output['acond'], output['arnorm'],\
-            output['xnorm'], output['var'] = istop, itn, r1norm, r2norm, \
-                                             anorm, acond, arnorm, xnorm, var
+        output['istop'], output['init_iters'], output['r1norm'],output['r2norm'], \
+        output['anorm'], output['acond'], output['arnorm'],output['xnorm'] = \
+            istop, itn, r1norm, r2norm, anorm, acond, arnorm, xnorm
         return AA, bb, x, x_true, output
 
     # Process equality constraints: scale by block, remove zero blocks, reorder

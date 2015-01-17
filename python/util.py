@@ -209,18 +209,18 @@ def load(filename, A=False, b=False, x_true=False):
 
 def has_OD(data,OD):
     return OD and 'T' in data and 'd' in data and data['T'] is not None and \
-           data['d'] is not None
+           data['d'] is not None and data['T'].size > 0 and data['d'].size > 0
 
 def has_CP(data,CP):
     return CP and 'U' in data and 'f' in data and data['U'] is not None and \
-           data['f'] is not None
+           data['f'] is not None and data['U'].size > 0 and data['f'].size > 0
 
 def has_LP(data,LP):
     return LP and 'V' in data and 'g' in data and data['V'] is not None and \
-           data['g'] is not None
+           data['g'] is not None and data['V'].size > 0 and data['g'].size > 0
 
 def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
-              init=False,thresh=1e-5,solve=False,damp=0.0):
+              init=False,thresh=1e-5,solve=False,damp=0.0,EQ_elim=True):
     """
     Load data from file about network state
 
@@ -242,7 +242,7 @@ def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
 
     # Load A,b if applicable
     A, b = None, None
-    if full and 'A_full' in data and 'b_full' in data:
+    if L and full and 'A_full' in data and 'b_full' in data:
         A = sparse(data['A_full'])
         b = array(data['b_full'])
         if len(data['A'].shape) == 1:
@@ -301,11 +301,11 @@ def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
         AA,bb = (V,g) if AA is None else (sps.vstack([AA,V]), np.append(bb,g))
         logging.info('V: (%s,%s)' % (V.shape))
 
-    if AA is None:
-        output['error'] = "AA,bb is empty"
-        return None,None,None,None,output
-
     if solve:
+        if AA is None:
+            output['error'] = "AA,bb is empty"
+            return None,None,None,None,output
+
         from scipy.sparse.linalg import lsqr
         x, istop, itn, r1norm, r2norm, anorm, acond, arnorm, xnorm, var = \
             lsqr(AA,bb,damp=damp)
@@ -318,7 +318,7 @@ def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
     block_sizes, rsort_index = None, None
     if eq == 'OD' and has_OD(data,OD):
         if has_CP(data,CP):
-            AA,bb = sps.vstack([AA,U]), np.append(bb,f)
+            AA,bb = (U,f) if AA is None else (sps.vstack([AA,U]), np.append(bb,f))
             logging.info('T: %s, U: %s' % (T.shape, U.shape))
         else:
             logging.info('T: (%s,%s)' % (T.shape))
@@ -328,7 +328,7 @@ def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
             'Check eq constraint Tx != d, norm: %s' % la.norm(T.dot(x_split)-d)
     elif eq == 'CP' and has_CP(data,CP):
         if has_OD(data,OD):
-            AA,bb = sps.vstack([AA,T]), np.append(bb,d)
+            AA,bb = (T,d) if AA is None else (sps.vstack([AA,T]), np.append(bb,d))
             logging.info('T: %s, U: %s' % (T.shape, U.shape))
         else:
             logging.info('U: (%s,%s)' % (U.shape))
@@ -346,6 +346,15 @@ def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
         AA,bb = A,b
     assert la.norm(AA.dot(x_split) - bb) < thresh, \
         'Improper scaling: AAx != bb, norm: %s' % la.norm(AA.dot(x_split) - bb)
+
+    if EQ_elim == False:
+        if eq == 'OD' and has_OD(data,OD):
+            return AA,bb,T,x_split,scaling,output
+        elif eq == 'CP' and has_CP(data,CP):
+            return AA,bb,U,x_split,scaling,output
+        else:
+            print 'Error: no eq constraint'
+            return AA,bb,None,x_split,scaling,output
 
     logging.debug('Creating sparse N matrix')
     if block_sizes is not None:

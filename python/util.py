@@ -241,7 +241,7 @@ def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
     output = {}
 
     # Load A,b if applicable
-    A, b = None, None
+    A, b, nz = None, None, None
     if L and full and 'A_full' in data and 'b_full' in data:
         A = sparse(data['A_full'])
         b = array(data['b_full'])
@@ -366,8 +366,10 @@ def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
         x0 = sps.linalg.lsmr(AA,bb)[0]
         return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output)
 
-    logging.info('AA : %s, A : %s, blocks: %s' % (AA.shape, A.shape,
-                                                  block_sizes.shape))
+    logging.info('AA : %s, A : %s, blocks: %s' % \
+                 (AA.shape if AA is not None else None,
+                  A.shape if A is not None else None,
+                  block_sizes.shape if block_sizes is not None else None))
 
     logging.debug('File loaded successfully')
     if init:

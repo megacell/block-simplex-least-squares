@@ -336,14 +336,17 @@ def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
         U,x_split,AA,block_sizes,rsort_index = EQ_block_sort(U,x_split,AA)
         assert la.norm(U.dot(x_split) - f) < thresh, \
             'Check eq constraint Ux != f, norm: %s' % la.norm(U.dot(x_split)-f)
-    else: # assume already sorted by blocks
-        logging.warning('Use of deprecated clause')
-        # TODO DEPRECATE
-        x_split = x_true
-        # TODO what is going on here????
-        scaling = array(A.sum(axis=0)/(A > 0).sum(axis=0))
-        scaling[np.isnan(scaling)]=0 # FIXME this is not accurate
-        AA,bb = A,b
+    # else: # assume already sorted by blocks
+    #     logging.warning('Use of deprecated clause')
+    #     # TODO DEPRECATE
+    #     x_split = x_true
+    #     # TODO what is going on here????
+    #     scaling = array(A.sum(axis=0)/(A > 0).sum(axis=0))
+    #     scaling[np.isnan(scaling)]=0 # FIXME this is not accurate
+    #     AA,bb = A,b
+    if AA is None:
+        output['error'] = "AA,bb is empty"
+        return None,None,None,None,None,output
     assert la.norm(AA.dot(x_split) - bb) < thresh, \
         'Improper scaling: AAx != bb, norm: %s' % la.norm(AA.dot(x_split) - bb)
 

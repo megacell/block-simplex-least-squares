@@ -337,8 +337,9 @@ def solver_input(data, full=False, L=True, OD=False, CP=False, LP=False,
             logging.info('U: (%s,%s)' % (U.shape))
         U,f,x_split,AA,bb,scaling = EQ_block_scale(U,f,x_true,AA,bb,noisy=noisy)
         U,x_split,AA,block_sizes,rsort_index = EQ_block_sort(U,x_split,AA)
-        assert la.norm(U.dot(x_split) - f) < thresh, \
-            'Check eq constraint Ux != f, norm: %s' % la.norm(U.dot(x_split)-f)
+        if not noisy:
+            assert la.norm(U.dot(x_split) - f) < thresh, \
+                'Check eq constraint Ux != f, norm: %s' % la.norm(U.dot(x_split)-f)
     # else: # assume already sorted by blocks
     #     logging.warning('Use of deprecated clause')
     #     # TODO DEPRECATE

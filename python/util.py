@@ -158,7 +158,7 @@ def EQ_block_sort(EQ,x,M):
     rsort_index = np.argsort(sort_index) # revert sort
     return (EQ.tocsr(),x,M.tocsr(),block_sizes,rsort_index)
 
-def EQ_block_scale(EQ,EQx,x,M,m, thresh=1e-30):
+def EQ_block_scale(EQ,EQx,x,M,m, thresh=1e-30, noisy=False):
     """
     Removes zero _blocks_ and scales matrices by block flow, given by EQ
 
@@ -177,8 +177,10 @@ def EQ_block_scale(EQ,EQx,x,M,m, thresh=1e-30):
     DEQ = sps.diags([scaling],[0])
     M, m = remove_zero_rows(col(M,nz).dot(DEQ),m)
     EQ,EQx = remove_zero_rows(col(EQ,nz).dot(DEQ),EQx)
-    assert la.norm(EQ.dot(x_split) - EQx) < 1e-10,\
-        'Improper scaling: EQx != EQx, norm: %s' % la.norm(EQ.dot(x_split) - EQx)
+    if not noisy:
+        assert la.norm(EQ.dot(x_split) - EQx) < 1e-10,\
+            'Improper scaling: EQx != EQx, norm: %s' % \
+            la.norm(EQ.dot(x_split) - EQx)
     return (EQ.tocsr(),EQx,x_split,M.tocsr(),m,scaling)
 
 def direct_solve(M,m,x_split=None):
@@ -219,8 +221,9 @@ def has_LP(data,LP):
     return LP and 'V' in data and 'g' in data and data['V'] is not None and \
            data['g'] is not None and data['V'].size > 0 and data['g'].size > 0
 
-def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
-              init=False,thresh=1e-5,solve=False,damp=0.0,EQ_elim=True):
+def solver_input(data, full=False, L=True, OD=False, CP=False, LP=False,
+                 eq=None, init=False, thresh=1e-5, solve=False, damp=0.0,
+                 EQ_elim=True, noisy=False):
     """
     Load data from file about network state
 
@@ -322,7 +325,7 @@ def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
             logging.info('T: %s, U: %s' % (T.shape, U.shape))
         else:
             logging.info('T: (%s,%s)' % (T.shape))
-        T,d,x_split,AA,bb,scaling = EQ_block_scale(T,d,x_true,AA,bb)
+        T,d,x_split,AA,bb,scaling = EQ_block_scale(T,d,x_true,AA,bb,noisy=noisy)
         T,x_split,AA,block_sizes,rsort_index = EQ_block_sort(T,x_split,AA)
         assert la.norm(T.dot(x_split) - d) < thresh, \
             'Check eq constraint Tx != d, norm: %s' % la.norm(T.dot(x_split)-d)
@@ -332,7 +335,7 @@ def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
             logging.info('T: %s, U: %s' % (T.shape, U.shape))
         else:
             logging.info('U: (%s,%s)' % (U.shape))
-        U,f,x_split,AA,bb,scaling = EQ_block_scale(U,f,x_true,AA,bb)
+        U,f,x_split,AA,bb,scaling = EQ_block_scale(U,f,x_true,AA,bb,noisy=noisy)
         U,x_split,AA,block_sizes,rsort_index = EQ_block_sort(U,x_split,AA)
         assert la.norm(U.dot(x_split) - f) < thresh, \
             'Check eq constraint Ux != f, norm: %s' % la.norm(U.dot(x_split)-f)
@@ -388,7 +391,7 @@ def solver_input(data,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
     return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output)
 
 def load_data(filename,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
-              init=False,thresh=1e-5):
+              init=False,thresh=1e-5, noisy=False):
     """
     Load data from file about network state
 
@@ -410,7 +413,7 @@ def load_data(filename,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
 
     AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output = \
         solver_input(data,full=full,L=L,OD=OD,CP=CP,LP=LP,eq=eq,init=init,
-                     thresh=thresh)
+                     thresh=thresh,noisy=noisy)
     return AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output
 
 def AN(A,N):

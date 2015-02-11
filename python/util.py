@@ -304,6 +304,8 @@ def _process_eq_constraints(data, AA, bb, x_true, U, f, T, d, eq='CP',
             logging.info('T: %s, U: %s' % (T.shape, U.shape))
         else:
             logging.info('T: (%s,%s)' % (T.shape))
+        if AA is None:
+            return None,None,None,None,None,None,None,None
         T,d,x_split,AA,bb,scaling = EQ_block_scale(T,d,x_true,AA,bb,noisy=noisy)
         T,x_split,AA,block_sizes,rsort_index = EQ_block_sort(T,x_split,AA)
         assert la.norm(T.dot(x_split) - d) < thresh, \
@@ -315,6 +317,8 @@ def _process_eq_constraints(data, AA, bb, x_true, U, f, T, d, eq='CP',
             logging.info('T: %s, U: %s' % (T.shape, U.shape))
         else:
             logging.info('U: (%s,%s)' % (U.shape))
+        if AA is None:
+            return None,None,None,None,None,None,None,None
         U,f,x_split,AA,bb,scaling = EQ_block_scale(U,f,x_true,AA,bb,noisy=noisy)
         U,x_split,AA,block_sizes,rsort_index = EQ_block_sort(U,x_split,AA)
         if not noisy:
@@ -372,7 +376,7 @@ def solver_input(data, full=False, L=True, OD=False, CP=False, LP=False,
         damp=damp, EQ_elim=EQ_elim, noisy=noisy)
 
     # Process equality constraints: scale by block, remove zero blocks, reorder
-    block_sizes, rsort_index = None, None
+    block_sizes, rsort_index, x_split, scaling = None, None, None, None
     if eq == 'OD' and has_OD(data,OD):
         T, d, x_split, AA, bb, block_sizes, scaling, rsort_index = \
                 _process_eq_constraints(data, AA, bb, x_true, U, f, T, d, eq=eq,
@@ -382,9 +386,9 @@ def solver_input(data, full=False, L=True, OD=False, CP=False, LP=False,
             _process_eq_constraints(data, AA, bb, x_true, U, f, T, d, eq=eq,
                                     thresh=thresh, noisy=noisy, OD=OD, CP=CP)
 
-    if AA is None:
+    if AA is None or x_split is None:
         output['error'] = "AA,bb is empty"
-        return None,None,None,None,None,output
+        return None,None,None,None,None,None,None,None,None,output
     if not noisy:
         assert la.norm(AA.dot(x_split) - bb) < thresh, \
             'Improper scaling: AAx != bb, norm: %s' % la.norm(AA.dot(x_split) - bb)
@@ -487,6 +491,7 @@ def timer(func, number= 1):
     Output the average time
     '''
     total = 0
+    output = None
     for _ in xrange(number):
         if sys.platform == "win32":
             t = time.clock

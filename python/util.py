@@ -193,6 +193,7 @@ def direct_solve(M,m,x_split=None):
             error = np.linalg.norm(x0-x_split)
             logging.info('Exact solution, error: %s' % error)
     else:
+        print 'Direct solve (M,m) =  (%s, %s)' % (repr(M.shape), repr(m.shape))
         x0 = sps.linalg.lsmr(M,m)[0]
         if x_split is not None:
             error = np.linalg.norm(x0-x_split)
@@ -327,15 +328,15 @@ def _process_eq_constraints(data, AA, bb, x_true, U, f, T, d, eq='CP',
         return U, f, x_split, AA, bb, block_sizes, scaling, rsort_index
     return NotImplemented
 
-def _solver_input_x(data, AA, bb, T, U, x_split, scaling, output, eq=None,
+def _solver_input_x(data, AA, bb, T, U, x_split, scaling, block_sizes, output, eq=None,
                     OD=False, CP=False):
     if eq == 'OD' and has_OD(data,OD):
-        return AA,bb,T,x_split,scaling,output
+        return AA,bb,T,x_split,scaling,block_sizes,output
     elif eq == 'CP' and has_CP(data,CP):
-        return AA,bb,U,x_split,scaling,output
+        return AA,bb,U,x_split,scaling,block_sizes,output
     else:
         print 'Error: no eq constraint'
-        return AA,bb,None,x_split,scaling,output
+        return AA,bb,None,x_split,scaling,block_sizes,output
 
 def _solver_init(data, T, d, U, f, x_split, block_sizes, init=False, eq='CP', OD=False,
                  CP=False):
@@ -388,14 +389,16 @@ def solver_input(data, full=False, L=True, OD=False, CP=False, LP=False,
 
     if AA is None or x_split is None:
         output['error'] = "AA,bb is empty"
+        if not EQ_elim:
+            return None,None,None,None,None,output
         return None,None,None,None,None,None,None,None,None,output
     if not noisy:
         assert la.norm(AA.dot(x_split) - bb) < thresh, \
             'Improper scaling: AAx != bb, norm: %s' % la.norm(AA.dot(x_split) - bb)
 
-    if EQ_elim == False:
-        return _solver_input_x(data, AA, bb, T, U, x_split, scaling, output,
-                               eq=eq, OD=OD, CP=CP)
+    if not EQ_elim:
+        return _solver_input_x(data, AA, bb, T, U, x_split, scaling,
+                               block_sizes, output, eq=eq, OD=OD, CP=CP)
 
     logging.debug('Creating sparse N matrix')
     # Generate N if possible, otherwise, compute the lsmr solution

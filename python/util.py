@@ -176,12 +176,14 @@ def EQ_block_scale(EQ,EQx,x,M,m, thresh=1e-30, noisy=False):
     scaling = scaling[nz]
     DEQ = sps.diags([scaling],[0])
     M, m = remove_zero_rows(col(M,nz).dot(DEQ),m)
-    EQ,EQx = remove_zero_rows(col(EQ,nz).dot(DEQ),EQx)
+    EQ, EQx = remove_zero_rows(col(EQ, nz).tocsr(), EQx)
+    ones = np.ones(EQx.shape)
+    # EQ,EQx = remove_zero_rows(col(EQ, nz).dot(DEQ), EQx)
     if not noisy:
-        assert la.norm(EQ.dot(x_split) - EQx) < 1e-10,\
-            'Improper scaling: EQx != EQx, norm: %s' % \
-            la.norm(EQ.dot(x_split) - EQx)
-    return (EQ.tocsr(),EQx,x_split,M.tocsr(),m,scaling)
+        assert la.norm(EQ.dot(x_split) - ones) < 1e-10,\
+            'Improper scaling: EQx != ones, norm: %s' % \
+            la.norm(EQ.dot(x_split) - ones)
+    return (EQ.tocsr(),ones,x_split,M.tocsr(),m,scaling)
 
 def direct_solve(M,m,x_split=None):
     if M.shape[0] == M.shape[1]:
@@ -353,7 +355,7 @@ def _solver_init(data, T, d, U, f, x_split, block_sizes, init=False, eq='CP', OD
 
 def solver_input(data, full=False, L=True, OD=False, CP=False, LP=False,
                  eq=None, init=False, thresh=1e-5, damp=0.0,
-                 EQ_elim=True, noisy=False):
+                 EQ_elim=True, noisy=False, return_EQ=False):
     """
     Load data from file about network state
 
@@ -419,7 +421,18 @@ def solver_input(data, full=False, L=True, OD=False, CP=False, LP=False,
     x0 = _solver_init(data, T, d, U, f, x_split, block_sizes, init=init, eq=eq,
                       OD=OD, CP=CP)
 
-    return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output)
+    if return_EQ:
+        if eq == 'OD' and has_OD(data,OD):
+            return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index,
+                    x0, output, T)
+        elif eq == 'CP' and has_CP(data,CP):
+            return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index,
+                    x0, output, U)
+        else:
+            return NotImplemented
+    else:
+        return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0,
+                output)
 
 def load_data(filename,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
               init=False,thresh=1e-5, noisy=False):

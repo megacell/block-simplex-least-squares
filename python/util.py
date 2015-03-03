@@ -434,7 +434,7 @@ def solver_input(data, full=False, L=True, OD=False, CP=False, LP=False,
         return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0,
                 output)
 
-def load_data(filename,full=False,L=True,OD=False,CP=False,LP=False,eq=None,
+def load_data(filename,full=True,L=True,OD=True,CP=True,LP=True,eq=None,
               init=False,thresh=1e-5, noisy=False):
     """
     Load data from file about network state

@@ -19,6 +19,11 @@ cdef extern from "arrays.h":
     void proj_multi_l1ball_hack(double *y, double *blocks, int numblocks, int n)
 
 def proj_l1ball_c(np.ndarray[np.double_t,ndim=1] y, start, end):
+    assert start >= 0, 'start must be >= 0'
+    assert start < len(y), 'start must be < len(y)'
+    assert end > 0, 'end must be > 0'
+    assert end <= len(y), 'end must be <= len(y)'
+    if start >= end: return
     cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
     y_c = np.ascontiguousarray(y, dtype=np.double)
     proj_l1ball(&y_c[0], start, end)

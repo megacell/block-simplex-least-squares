@@ -15,23 +15,20 @@ import numpy as np
 
 
 cdef extern from "arrays.h":
-    void proj_l1ball(double *y, int start, int end)
-    void proj_multi_l1ball_hack(double *y, double *blocks, int numblocks, int n)
+    void proj_simplex(double *y, int start, int end)
+    void proj_multi_simplex_hack(double *y, double *blocks, int numblocks, int n)
 
-def proj_l1ball_c(np.ndarray[np.double_t,ndim=1] y, start, end):
-    assert start >= 0, 'start must be >= 0'
-    assert start < len(y), 'start must be < len(y)'
-    assert end > 0, 'end must be > 0'
-    assert end <= len(y), 'end must be <= len(y)'
+def proj_simplex_c(np.ndarray[np.double_t,ndim=1] y, start, end):
+    assert start>=0 and start<len(y) and end>0 and end<=len(y)
     if start >= end: return
     cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
     y_c = np.ascontiguousarray(y, dtype=np.double)
-    proj_l1ball(&y_c[0], start, end)
+    proj_simplex(&y_c[0], start, end)
 
-def proj_multi_l1ball_c(np.ndarray[np.double_t,ndim=1] y,
+def proj_multi_simplex_c(np.ndarray[np.double_t,ndim=1] y,
     np.ndarray[np.double_t,ndim=1] blocks):
     cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
     cdef np.ndarray[np.double_t, ndim=1, mode="c"] b_c
     y_c = np.ascontiguousarray(y, dtype=np.double)
     b_c = np.ascontiguousarray(blocks, dtype=np.double)
-    proj_multi_l1ball_hack(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])
+    proj_multi_simplex_hack(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])

@@ -50,15 +50,14 @@ MATLAB dependencies (must be run every time MATLAB is started):
     setup.m
 
 
-proj_l1ball setup
------------------
+proj_simplex setup
+-----------------    
+Instructions to bind the c-implementation of proj_simplex to Python
 
-Instructions to bind the c-implementation of proj_l1ball to Python
-
-    cd python/proj_l1ball
+    cd python/proj_simplex
     python setup.py build_ext --inplace 
 
-check if it created an executable 'proj_l1ball_c.so' and 'proj_l1ball_c.cpp'
+check if it created an executable 'proj_simplex_c.so' and 'proj_simplex_c.cpp'
 now run this to test the implementation
 
     python call_cpp.py

@@ -13,9 +13,9 @@ using std::endl;
 
 const int SIZE = 7;
 
-void proj_l1ball(double *y, int start, int end) {
+void proj_simplex(double *y, int start, int end) {
 /*
-Projects the subvector between start and end on the l1-ball
+Projects the subvector between start and end on the simplex
 */
     double u[end-start];
 	std::copy(y+start, y+end, u);
@@ -38,29 +38,29 @@ Projects the subvector between start and end on the l1-ball
 }
 
 
-void proj_multi_l1ball(double *y, int *blocks, int numblocks, int n) {
+void proj_multi_simplex(double *y, int *blocks, int numblocks, int n) {
 /*
 Do multiple projections where blocks is an array of integers that
 constains the first index of each block and n the length of the array
 */
     int i;
     for (i = 0; i < numblocks-1; i++) {
-        proj_l1ball(y, blocks[i], blocks[i+1]);
+        proj_simplex(y, blocks[i], blocks[i+1]);
     } 
-    proj_l1ball(y, blocks[numblocks-1], n);
+    proj_simplex(y, blocks[numblocks-1], n);
 }
 
 
-void proj_multi_l1ball_hack(double *y, double *blocks, int numblocks, int n) {
+void proj_multi_simplex_hack(double *y, double *blocks, int numblocks, int n) {
 /*
 Do multiple projections where blocks is an array of integers that
 constains the first index of each block and n the length of the array
 */
     int i;
     for (i = 0; i < numblocks-1; i++) {
-        proj_l1ball(y, (int)blocks[i], (int)blocks[i+1]);
+        proj_simplex(y, (int)blocks[i], (int)blocks[i+1]);
     } 
-    proj_l1ball(y, (int)blocks[numblocks-1], n);
+    proj_simplex(y, (int)blocks[numblocks-1], n);
 }
 
 
@@ -69,7 +69,7 @@ int test_array() {
     double doubleArray[SIZE] = {5.352, 3.23, 32.78, -1.234, 1.7, 104., 53.};
     int blocks[] = {0, 2, 4};
 
-    proj_multi_l1ball(doubleArray, blocks, 3, 7);
+    proj_multi_simplex(doubleArray, blocks, 3, 7);
     cout << "Projected block-vector is this." << endl;
     for (size_t i = 0; i != SIZE; ++i)
         cout << doubleArray[i] << " ";
@@ -78,7 +78,7 @@ int test_array() {
     double doubleArray2[SIZE] = {5.352, 3.23, 32.78, -1.234, 1.7, 104., 53.};
     double blocks2[] = {0., 2., 4.};
 
-    proj_multi_l1ball_hack(doubleArray2, blocks2, 3, 7);
+    proj_multi_simplex_hack(doubleArray2, blocks2, 3, 7);
     cout << "Projected block-vector is this." << endl;
     for (size_t i = 0; i != SIZE; ++i)
         cout << doubleArray2[i] << " ";

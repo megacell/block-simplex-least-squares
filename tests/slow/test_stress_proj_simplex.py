@@ -4,13 +4,13 @@ import time
 __author__ = 'jeromethai'
 
 import sys
-sys.path.append('../../python/proj_l1ball/')
-from proj_l1ball_c import proj_l1ball_c, proj_multi_l1ball_c
-from proj_l1ball import proj_l1ball
+sys.path.append('../../python/proj_simplex/')
+from proj_simplex_c import proj_simplex_c, proj_multi_simplex_c
+from proj_simplex import proj_simplex
 import numpy as np
 
 
-class TestStressProjL1Ball(unittest.TestCase):
+class TestStressProjSimplex(unittest.TestCase):
 
 
     def setUp(self):
@@ -29,12 +29,12 @@ class TestStressProjL1Ball(unittest.TestCase):
         return times
 
 
-    def test_proj_l1ball_c(self):
-        print self.run_tests_with(proj_l1ball_c)
+    def test_proj_simplex_c(self):
+        print self.run_tests_with(proj_simplex_c)
 
 
-    def test_proj_l1ball(self):
-    	print self.run_tests_with(proj_l1ball)
+    def test_proj_simplex(self):
+    	print self.run_tests_with(proj_simplex)
 
 
 if __name__ == '__main__':

@@ -49,6 +49,22 @@ MATLAB dependencies (must be run every time MATLAB is started):
 
     setup.m
 
+
+c_proj_l1ball setup
+-------------------
+
+Instructions to bind the c-implementation of proj_l1ball to Python
+
+    cd python/c_proj_l1ball
+    python setup.py build_ext --inplace 
+
+check if it created an executable 'proj_l1ball_c.so' and 'proj_l1ball_c.cpp'
+now run this to test the implementation
+
+    python call_cpp.py
+
+works if no assertion error
+
 Running via MATLAB
 -------------------
 Run `main.m`.

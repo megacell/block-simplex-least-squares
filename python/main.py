@@ -7,7 +7,7 @@ import numpy.linalg as la
 
 import solvers
 import util
-from c_extensions.simplex_projection import simplex_projection
+from proj_simplex.simplex_projection import simplex_projection
 # from projection import pysimplex_projection
 import BB, LBFGS, DORE
 import config as c

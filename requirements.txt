@@ -1,3 +1,6 @@
 matplotlib
 cvxopt
+# for isotonic regression
 scikit-learn
+# for building C extensions
+Cython

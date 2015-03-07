@@ -16,7 +16,7 @@ from Cython.Distutils import build_ext
 sourcefiles = ["isotonic_regression_c.pyx"]
 name = "isotonic_regression_c"
 
-simplex_projection = Extension("simplex_projection", 
+simplex_projection = Extension("simplex_projection",
         sources = ["simplex_projection.c"],
         include_dirs=[numpy.get_include()])
 

@@ -1,8 +1,8 @@
 import unittest
 import sys
-sys.path.append('../../python/proj_simplex/')
-from proj_simplex_c import proj_simplex_c, proj_multi_simplex_c
-from proj_simplex import proj_simplex, proj_multi_simplex
+# sys.path.append('../../python/proj_simplex/')
+from python.proj_simplex.proj_simplex_c import proj_simplex_c, proj_multi_simplex_c
+from python.proj_simplex.proj_simplex import proj_simplex, proj_multi_simplex
 import numpy as np
 
 
@@ -60,7 +60,7 @@ class TestProjSimplex(unittest.TestCase):
 
 
     def test_proj_simplex(self):
-    	self.run_tests_single_block_with(proj_simplex)
+        self.run_tests_single_block_with(proj_simplex)
 
 
     def test_proj_multi_simplex_c(self):

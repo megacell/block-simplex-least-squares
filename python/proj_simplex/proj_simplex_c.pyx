@@ -27,6 +27,7 @@ def proj_simplex_c(np.ndarray[np.double_t,ndim=1] y, start, end):
 
 def proj_multi_simplex_c(np.ndarray[np.double_t,ndim=1] y, blocks):
     assert False not in ((blocks[1:]-blocks[:-1])>0), 'block indices not increasing'
+    assert blocks[0]>=0 and blocks[-1]<len(y), 'indices out of range'
     blocks = blocks.astype(np.double)
     cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
     cdef np.ndarray[np.double_t, ndim=1, mode="c"] b_c

@@ -8,7 +8,7 @@ python/config.py
 
 # C extensions
 *.so
-proj_l1ball_c.cpp
+proj_simplex_c.cpp
 
 # Packages
 *.egg

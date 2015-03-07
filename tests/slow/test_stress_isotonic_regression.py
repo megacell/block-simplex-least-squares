@@ -6,6 +6,7 @@ __author__ = 'jeromethai'
 import sys
 sys.path.append('../../python/isotonic_regression/')
 from isotonic_regression import proj_PAV
+from isotonic_regression_c import isotonic_regression_c
 import numpy as np
 from sklearn.isotonic import IsotonicRegression
 from sklearn.utils import check_random_state
@@ -45,7 +46,17 @@ class TestStressIsotonicRegression(unittest.TestCase):
 
 
     def test_isotonic_regression_c(self):
-        pass
+        times = []
+        for n in [int(1e3), int(1e4), int(1e5)]:
+            rs = check_random_state(0)
+            y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
+            w = np.ones(n)
+            start_time = time.time()
+            isotonic_regression_c(y, w)
+            times.append(time.time() - start_time)
+        print 'test isotonic_regression_c'
+        print times
+
 
 
 

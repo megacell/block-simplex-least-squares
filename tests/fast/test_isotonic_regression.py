@@ -18,7 +18,8 @@ class TestIsotonicRegression(unittest.TestCase):
 
 
     def test_proj_PAV(self):
-        x = np.arange(6)
+        n = 6
+        x = np.arange(n)
         y = np.array([4,5,1,6,8,7])
         truth = [3.33333333, 3.33333333, 3.33333333, 6., 7.5, 7.5]
         ir = IsotonicRegression()

@@ -10,6 +10,7 @@ import numpy.linalg as la
 from sklearn.isotonic import IsotonicRegression
 
 from isotonic_regression.simplex_projection import simplex_projection
+from isotonic_regression.block_isotonic_regression import block_isotonic_regression
 # from python.isotonic_regression.simplex_projection import simplex_projection
 # from projection import pysimplex_projection
 import config as c
@@ -35,6 +36,11 @@ def parser():
     return parser
 
 def LS_solve(A,b,x0,N,block_sizes,method):
+    if block_sizes is not None and len(block_sizes) == A.shape[1]:
+        logging.error('Trivial example: nblocks == nroutes, exiting solver')
+        import sys
+        sys.exit()
+
     z0 = x2z(x0,block_sizes)
     target = A.dot(x0)-b
 
@@ -50,14 +56,11 @@ def LS_solve(A,b,x0,N,block_sizes,method):
     blocks_end = cum_blocks[1:]
 
     def proj(x):
-        inputs = [(np.arange(bs),x[s:e]) for (bs,s,e) in \
-                  zip(block_sizes-1,blocks_start,blocks_end)]
-        proj_blocks = [ir.fit_transform(xs,ys) for (xs,ys) in inputs]
-        value = np.concatenate(proj_blocks)
+        return block_isotonic_regression(x, ir, block_sizes, blocks_start,
+                                         blocks_end)
         # value = simplex_projection(block_sizes - 1,x)
         # value = pysimplex_projection(block_sizes - 1,x)
-        projected_value = np.maximum(np.minimum(value, 1), 0)
-        return projected_value
+        # return projected_value
 
     if method == 'DORE':
         gd = GradientDescent(z0=z0, f=f, nabla_f=nabla_f, proj=proj,

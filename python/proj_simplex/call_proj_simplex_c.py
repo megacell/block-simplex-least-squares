@@ -6,7 +6,6 @@ Created on 5 nov. 2014
 '''
 
 from proj_simplex_c import proj_simplex_c, proj_multi_simplex_c
-import timeit
 import numpy as np
 
 

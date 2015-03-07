@@ -11,6 +11,11 @@ __author__ = 'jeromethai'
 
 class TestProjSimplex(unittest.TestCase):
 
+    def setUp(self):
+        # The setup code is run before each test
+        seed = 237423433
+        np.random.seed(seed)
+
 
     def run_tests_single_block_with(self, proj):
         z = np.array([5.352, 3.23, 32.78, -1.234, 1.7, 104., 53.])
@@ -20,6 +25,10 @@ class TestProjSimplex(unittest.TestCase):
             y = np.copy(z)
             proj(y, start, end)
             self.compare_arrays(y, truth)
+        y = np.random.rand(7)
+        proj(y, 0, 7)
+        truth = np.array([0., .05006376, .54108944, 0., .38841272, 0., .02043408])
+        self.assertTrue(np.linalg.norm(y - truth) < 1e-6)
         # check out of bound indices
         for start, end in [(2,8), (-1,7), (-1,4)]:
             try:

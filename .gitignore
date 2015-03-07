@@ -9,6 +9,7 @@ python/config.py
 # C extensions
 *.so
 proj_simplex_c.cpp
+isotonic_regression_c.cpp
 
 # Packages
 *.egg

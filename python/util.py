@@ -621,6 +621,7 @@ def assert_scaled_incidence(M,thresh=1e-12):
     assert (np.abs(array(col_sum) - array(col_nz) * entry_val) < thresh).all(), \
         'Not a proper scaled incidence matrix, check column entries'
 
+
 if __name__ == "__main__":
     x = np.array([1/6.,2/6.,3/6.,1,.5,.1,.4])
     

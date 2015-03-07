@@ -25,10 +25,12 @@ def proj_simplex_c(np.ndarray[np.double_t,ndim=1] y, start, end):
     y_c = np.ascontiguousarray(y, dtype=np.double)
     proj_simplex(&y_c[0], start, end)
 
-def proj_multi_simplex_c(np.ndarray[np.double_t,ndim=1] y,
-    np.ndarray[np.double_t,ndim=1] blocks):
+def proj_multi_simplex_c(np.ndarray[np.double_t,ndim=1] y, blocks):
+    assert False not in ((blocks[1:]-blocks[:-1])>0), 'block indices not increasing'
+    blocks = blocks.astype(np.double)
     cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
     cdef np.ndarray[np.double_t, ndim=1, mode="c"] b_c
     y_c = np.ascontiguousarray(y, dtype=np.double)
     b_c = np.ascontiguousarray(blocks, dtype=np.double)
     proj_multi_simplex_hack(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])
+

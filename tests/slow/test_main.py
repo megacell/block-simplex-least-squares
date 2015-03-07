@@ -3,12 +3,13 @@ import random
 import argparse
 
 import numpy as np
+import scipy.linalg as sla
+import scipy.io
 
 from python.main import main
 from python.util import generate_data
 
 __author__ = 'cathywu'
-
 
 class TestMain(unittest.TestCase):
     def setUp(self):
@@ -28,20 +29,8 @@ class TestMain(unittest.TestCase):
 
         self.args = args
 
-    def test_converge_small(self):
-        generate_data(self.args.file)
-        iters, times, states, output = main(args=self.args)
-        # Check convergence
-        self.assertTrue(output['0.5norm(Ax-b)^2'][-1] < 1e-16)
-
-    def test_converge_x_sparse(self):
-        generate_data(self.args.file, alpha=0.5)
-        iters, times, states, output = main(args=self.args)
-        # Check convergence
-        self.assertTrue(output['0.5norm(Ax-b)^2'][-1] < 1e-16)
-
-    def test_converge_A_sparse(self):
-        generate_data(self.args.file, A_sparse=0.05)
+    def test_converge_medium(self):
+        generate_data(self.args.file, n=1000, m1=100, m2=10)
         iters, times, states, output = main(args=self.args)
         # Check convergence
         self.assertTrue(output['0.5norm(Ax-b)^2'][-1] < 1e-16)

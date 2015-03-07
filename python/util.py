@@ -1,16 +1,18 @@
 import ipdb
+import sys
+import time
+import logging
 
 import scipy.sparse
 import scipy.sparse.linalg
 import scipy.sparse.linalg as sla
 import numpy as np
 import numpy.linalg as la
+import scipy.linalg as ssla
+import scipy.io
 from scipy.linalg import block_diag
 import scipy.sparse as sps
-import sys
-import time
 import scipy.io as sio
-import logging
 
 # Constraints
 PROB_SIMPLEX = 'probability simplex'
@@ -621,6 +623,28 @@ def assert_scaled_incidence(M,thresh=1e-12):
     assert (np.abs(array(col_sum) - array(col_nz) * entry_val) < thresh).all(), \
         'Not a proper scaled incidence matrix, check column entries'
 
+def generate_data(fname, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0):
+    """
+    A is m1 x n
+    U is m2 x n
+
+    :param fname: file to save to on disk
+    :param n: size of x
+    :param m1: number of measurements
+    :param m2: number of blocks
+    :param A_sparse: sparseness of A matrix
+    :param alpha: prior for Dirichlet generating blocks of x
+    :return:
+    """
+    A = (np.random.random((m1, n)) > A_sparse).astype(np.float)
+    block_sizes = np.random.multinomial(n,np.ones(m2)/m2)
+    x = np.concatenate([np.random.dirichlet(alpha*np.ones(bs)) for bs in \
+                        block_sizes])
+    b = A.dot(x)
+    U = ssla.block_diag(*[np.ones(bs) for bs in block_sizes])
+    f = U.dot(x)
+    scipy.io.savemat(fname, { 'A': A, 'b': b, 'x_true': x, 'U': U, 'f': f },
+                     oned_as='column')
 
 if __name__ == "__main__":
     x = np.array([1/6.,2/6.,3/6.,1,.5,.1,.4])

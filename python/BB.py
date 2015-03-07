@@ -1,6 +1,7 @@
+import time
+
 import numpy as np
 import numpy.linalg as la
-import time
 
 # Barzilai-Borwein (BB)
 def solve(x0, f, nabla_f, stopping, record_every=500, proj=None, log=None,

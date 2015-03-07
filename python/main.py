@@ -1,17 +1,22 @@
-import scipy.io as sio
-import matplotlib.pyplot as plt
+#!/usr/bin/env python
+
+import ipdb
 import argparse
 import logging
+
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
+from sklearn.isotonic import IsotonicRegression
 
-import solvers
-import util
-from proj_simplex.simplex_projection import simplex_projection
+from isotonic_regression.simplex_projection import simplex_projection
+# from python.isotonic_regression.simplex_projection import simplex_projection
 # from projection import pysimplex_projection
-import BB, LBFGS, DORE
 import config as c
-from util import load_data
+from util import load_data, x2z
+from gradient_descent import GradientDescent
+
+__author__ = 'cathywu'
 
 def parser():
     parser = argparse.ArgumentParser()
@@ -30,55 +35,39 @@ def parser():
     return parser
 
 def LS_solve(A,b,x0,N,block_sizes,method):
-    z0 = util.x2z(x0,block_sizes)
+    z0 = x2z(x0,block_sizes)
     target = A.dot(x0)-b
 
-    options = { 'max_iter': 300000,
-                'verbose': 1,
-                'opt_tol' : 1e-30,
-                'suff_dec': 0.003, # FIXME unused
-                'corrections': 500 } # FIXME unused
     AT = A.T.tocsr()
     NT = N.T.tocsr()
 
     f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
     nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
 
+    ir = IsotonicRegression(y_min=0, y_max=1)
+    cum_blocks = np.concatenate(([0], np.cumsum(block_sizes-1)))
+    blocks_start = cum_blocks
+    blocks_end = cum_blocks[1:]
+
     def proj(x):
-        projected_value = simplex_projection(block_sizes - 1,x)
-        # projected_value = pysimplex_projection(block_sizes - 1,x)
+        inputs = [(np.arange(bs),x[s:e]) for (bs,s,e) in \
+                  zip(block_sizes-1,blocks_start,blocks_end)]
+        proj_blocks = [ir.fit_transform(xs,ys) for (xs,ys) in inputs]
+        value = np.concatenate(proj_blocks)
+        # value = simplex_projection(block_sizes - 1,x)
+        # value = pysimplex_projection(block_sizes - 1,x)
+        projected_value = np.maximum(np.minimum(value, 1), 0)
         return projected_value
 
-    import time
-    iters, times, states = [], [], []
-    def log(iter_,state,duration):
-        iters.append(iter_)
-        times.append(duration)
-        states.append(state)
-        start = time.time()
-        return start
-
-    logging.debug('Starting %s solver...' % method)
-    if method == 'LBFGS':
-        LBFGS.solve(z0+1, f, nabla_f, solvers.stopping, log=log,proj=proj,
-                    options=options)
-        logging.debug("Took %s time" % str(np.sum(times)))
-    elif method == 'BB':
-        BB.solve(z0,f,nabla_f,solvers.stopping,log=log,proj=proj,
-                 options=options)
-    elif method == 'DORE':
-        # setup for DORE
-        alpha = 0.99
-        lsv = util.lsv_operator(A, N)
-        logging.info("Largest singular value: %s" % lsv)
-        A_dore = A*alpha/lsv
-        target_dore = target*alpha/lsv
-
-        DORE.solve(z0, lambda z: A_dore.dot(N.dot(z)),
-                   lambda b: N.T.dot(A_dore.T.dot(b)), target_dore, proj=proj,
-                   log=log,options=options,record_every=100)
-        A_dore = None
-    logging.debug('Stopping %s solver...' % method)
+    if method == 'DORE':
+        gd = GradientDescent(z0=z0, f=f, nabla_f=nabla_f, proj=proj,
+                             method=method, A=A, N=N, target=target)
+    else:
+        gd = GradientDescent(z0=z0, f=f, nabla_f=nabla_f, proj=proj,
+                             method=method)
+    iters, times, states = gd.run()
+    x = x0 + N.dot(states[-1])
+    assert np.all(x >= 0), 'x shouldn\'t have negative entries after projection'
     return iters, times, states
 
 def LS_postprocess(states, x0, A, b, x_true, scaling=None, block_sizes=None,

@@ -1,8 +1,8 @@
 import unittest
 from sklearn.isotonic import IsotonicRegression
 import sys
-sys.path.append('../../python/isotonic_regression/')
-from isotonic_regression import proj_PAV
+# sys.path.append('../../python/isotonic_regression/')
+from python.isotonic_regression.isotonic_regression import proj_PAV
 
 __author__ = 'jeromethai'
 

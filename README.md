@@ -62,8 +62,8 @@ now run this to test the implementation
 
     python call_proj_simplex_c.py
 
-and for isotonic_regression_c
-taken from: http://tullo.ch/articles/speeding-up-isotonic-regression/
+To set up isotonic_regression_c adapted from:
+http://tullo.ch/articles/speeding-up-isotonic-regression/
 
     cd ../isotonic_regression
     python setup.py build_ext --inplace

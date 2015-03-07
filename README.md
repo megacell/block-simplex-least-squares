@@ -16,6 +16,10 @@ To build the simplex projection c extension:
 1. `cd` into `python/c_extensions`
 2. run `python2 setup.py build_ext --inplace`
 
+Set up the pre-commit hook (which automatically runs the fast unit tests):
+
+      ln -s ../../pre-commit.sh .git/hooks/pre-commit
+
 Running via Python
 -------------------
 Run the python implementation from the `traffic-estimation/python` directory.

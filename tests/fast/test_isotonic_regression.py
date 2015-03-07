@@ -3,6 +3,7 @@ from sklearn.isotonic import IsotonicRegression
 import sys
 # sys.path.append('../../python/isotonic_regression/')
 from python.isotonic_regression.isotonic_regression import proj_PAV
+from python.isotonic_regression.isotonic_regression_c import isotonic_regression_c, isotonic_regression_multi_c
 
 __author__ = 'jeromethai'
 
@@ -25,6 +26,23 @@ class TestIsotonicRegression(unittest.TestCase):
         ir = IsotonicRegression()
         self.assertTrue(np.linalg.norm(ir.fit_transform(x, y) - truth) < 1e-6)
         self.assertTrue(np.linalg.norm(proj_PAV(y) - truth) < 1e-6)
+
+
+    def test_isotonic_regression_c(self):
+        n = 6
+        y = np.array([4.,5.,1.,6.,8.,7.])
+        w = np.ones(n)
+        isotonic_regression_c(y, w, 0, n)
+        truth = np.array([3.33333333, 3.33333333, 3.33333333, 6., 7.5, 7.5])
+        assert np.linalg.norm(y-truth) < 1e-6
+
+
+    def test_isotonic_regression_multi_c(self):
+        y = np.array([4.,5.,1.,6.,8.,7.])
+        blocks = np.array([0, 2, 4])
+        isotonic_regression_multi_c(y, np.ones(6), blocks)
+        truth = np.array([4., 5., 1., 6., 7.5, 7.5])
+        assert np.linalg.norm(y-truth) < 1e-6
 
 
 if __name__ == '__main__':

@@ -47,7 +47,7 @@ class TestProjSimplex(unittest.TestCase):
             y = np.copy(z)
             proj(y, blocks)
             self.compare_arrays(y, truth)
-        for b in [np.array([-1,2,4]), np.array([1,3,7])]:
+        for b in [np.array([-1,2,4]), np.array([1,3,7]), np.array([0,4,2])]:
             try:
                 proj(y, b)
                 self.assertTrue(False)

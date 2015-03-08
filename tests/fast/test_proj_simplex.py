@@ -2,8 +2,8 @@ import unittest
 import sys
 
 sys.path.append('../../')
-from python.proj_simplex.proj_simplex_c import proj_simplex_c, proj_multi_simplex_c
-from python.proj_simplex.proj_simplex import proj_simplex, proj_multi_simplex
+from python.c_extensions.c_extensions import proj_simplex_c, proj_multi_simplex_c
+from python.c_extensions.python_implementation import proj_simplex, proj_multi_simplex
 
 import numpy as np
 

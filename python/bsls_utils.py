@@ -350,10 +350,13 @@ def _solver_init(data, T, d, U, f, x_split, block_sizes, init=False, eq='CP', OD
         elif eq == 'CP' and has_CP(data,CP):
             x0 = direct_solve(U,f,x_split=x_split)
         else:
-            x0 = np.array(block_e(block_sizes - 1, block_sizes))
+            x0 = particular_x0(block_sizes)
     else:
-        x0 = np.array(block_e(block_sizes - 1, block_sizes))
+        x0 = particular_x0(block_sizes)
     return x0
+
+def particular_x0(block_sizes):
+    return np.array(block_e(block_sizes - 1, block_sizes))
 
 def solver_input(data, full=False, L=True, OD=False, CP=False, LP=False,
                  eq=None, init=False, thresh=1e-5, damp=0.0,

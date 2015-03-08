@@ -54,24 +54,18 @@ MATLAB dependencies (must be run every time MATLAB is started):
     setup.m
 
 
-proj_simplex_c and isotonic_regression_c setups
+c_extensions setup
 -----------------    
-To bind Cythonic proj_simplex_c to Python
+To bind Cythonic extensions to Python
 
-    cd python/proj_simplex
+    cd python/c_extensions
     python setup.py build_ext --inplace 
 
-check if it created an executable 'proj_simplex_c.so' and 'proj_simplex_c.cpp'
+check if it created an executable 'c_extensions.so' and 'c_extensions.cpp'
 now run this to test the implementation
 
-    python call_proj_simplex_c.py
+    python check_extensions.py
 
-To set up isotonic_regression_c adapted from:
-http://tullo.ch/articles/speeding-up-isotonic-regression/
-
-    cd ../isotonic_regression
-    python setup.py build_ext --inplace
-    python call_isotonic_regression_c.py
 
 Running via MATLAB
 -------------------

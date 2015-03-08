@@ -1,17 +1,18 @@
 '''
-Created on 6 mar. 2015
+Created on 7 mar. 2015
 
 C++11 wrapping with cython.
 Compile with python setup.py build_ext --inplace
 
 @author: jerome thai
 
-adapted from:
-http://tullo.ch/articles/speeding-up-isotonic-regression/
 '''
 
 cimport numpy as np
 import numpy as np
+
+# PAV algorithm for isotonic regression adapted from:
+# http://tullo.ch/articles/speeding-up-isotonic-regression/
 
 def isotonic_regression_c(np.ndarray[np.double_t,ndim=1] y,
                          np.ndarray[np.double_t,ndim=1] weight, start, end):
@@ -93,7 +94,26 @@ def isotonic_regression_multi_c(np.ndarray[np.double_t,ndim=1] y,
         j += 1
 
 
+cdef extern from "arrays.h":
+    void proj_simplex(double *y, int start, int end)
+    void proj_multi_simplex_hack(double *y, double *blocks, int numblocks, int n)
+
+def proj_simplex_c(np.ndarray[np.double_t,ndim=1] y, start, end):
+    n = y.shape[0]
+    assert start>=0 and start<n and end>0 and end<=n
+    if start >= end: return
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
+    y_c = np.ascontiguousarray(y, dtype=np.double)
+    proj_simplex(&y_c[0], start, end)
 
 
-
-
+def proj_multi_simplex_c(np.ndarray[np.double_t,ndim=1] y, blocks):
+    n = y.shape[0]
+    assert False not in ((blocks[1:]-blocks[:-1])>0), 'block indices not increasing'
+    assert blocks[0]>=0 and blocks[-1]<n, 'indices out of range'
+    blocks = blocks.astype(np.double)
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] b_c
+    y_c = np.ascontiguousarray(y, dtype=np.double)
+    b_c = np.ascontiguousarray(blocks, dtype=np.double)
+    proj_multi_simplex_hack(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])

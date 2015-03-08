@@ -9,8 +9,9 @@ import numpy as np
 import numpy.linalg as la
 from sklearn.isotonic import IsotonicRegression
 
-from isotonic_regression.simplex_projection import simplex_projection
-from isotonic_regression.block_isotonic_regression import block_isotonic_regression
+#from isotonic_regression.simplex_projection import simplex_projection
+from c_extensions.c_extensions import isotonic_regression_c, isotonic_regression_multi_c
+#from isotonic_regression.block_isotonic_regression import block_isotonic_regression
 # from python.isotonic_regression.simplex_projection import simplex_projection
 # from projection import pysimplex_projection
 import config as c

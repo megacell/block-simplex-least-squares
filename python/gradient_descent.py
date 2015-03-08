@@ -7,7 +7,8 @@ import numpy as np
 
 import solvers
 import util
-from c_extensions.simplex_projection import simplex_projection
+#from c_extensions.simplex_projection import simplex_projection
+from c_extensions.c_extensions import isotonic_regression_c, isotonic_regression_multi_c
 # from projection import pysimplex_projection
 import BB, LBFGS, DORE
 import config as c

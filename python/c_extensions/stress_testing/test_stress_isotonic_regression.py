@@ -4,9 +4,9 @@ import time
 __author__ = 'jeromethai'
 
 import sys
-sys.path.append('../../python/isotonic_regression/')
-from isotonic_regression import proj_PAV
-from isotonic_regression_c import isotonic_regression_c, isotonic_regression_multi_c
+sys.path.append('../../../')
+from python.c_extensions.python_implementation import proj_PAV
+from python.c_extensions.c_extensions import isotonic_regression_c, isotonic_regression_multi_c
 import numpy as np
 from sklearn.isotonic import IsotonicRegression
 from sklearn.utils import check_random_state
@@ -20,6 +20,7 @@ class TestStressIsotonicRegression(unittest.TestCase):
 
 
     def test_isotonic_regression(self):
+        self.setUp()
         times = []
         for n in [int(1e3), int(1e4)]:
             x = np.arange(n)
@@ -34,6 +35,7 @@ class TestStressIsotonicRegression(unittest.TestCase):
 
 
     def test_proj_PAV(self):
+        self.setUp()
         times = []
         for n in [int(1e3), int(1e4)]:
             rs = check_random_state(0)
@@ -46,6 +48,7 @@ class TestStressIsotonicRegression(unittest.TestCase):
 
 
     def test_isotonic_regression_c(self):
+        self.setUp()
         times = []
         for n in [int(1e3), int(1e4), int(1e5), int(1e6)]:
             rs = check_random_state(0)
@@ -59,6 +62,7 @@ class TestStressIsotonicRegression(unittest.TestCase):
 
 
     def test_isotonic_regression_multi_c(self):
+        self.setUp()
         n = int(1e6)
         w = np.ones(n)
         times = []
@@ -74,8 +78,7 @@ class TestStressIsotonicRegression(unittest.TestCase):
 
 
 
-
-
-
 if __name__ == '__main__':
     unittest.main()
+
+

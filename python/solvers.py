@@ -1,10 +1,9 @@
-from util import is_ones, all_equal, block_e, PROB_SIMPLEX, EQ_CONSTR_ELIM, \
-        L_BFGS, ADMM, SPG
+import ipdb
 import numpy as np
 import numpy.linalg as la
 import logging
-import scipy.io as sio
-from numpy import ones, array
+from bsls_utils import block_e, PROB_SIMPLEX, EQ_CONSTR_ELIM, L_BFGS, ADMM, SPG
+
 
 def qp(P, q, G=None, h=None, A=None, b=None, solver=None, initvals=None):
     from cvxopt.solvers import qp

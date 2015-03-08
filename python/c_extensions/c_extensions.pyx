@@ -117,3 +117,25 @@ def proj_multi_simplex_c(np.ndarray[np.double_t,ndim=1] y, blocks):
     y_c = np.ascontiguousarray(y, dtype=np.double)
     b_c = np.ascontiguousarray(blocks, dtype=np.double)
     proj_multi_simplex_hack(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])
+
+
+def quad_obj(np.ndarray[np.double_t,ndim=1] x,
+             np.ndarray[np.double_t,ndim=2] Q,
+             np.ndarray[np.double_t,ndim=1] c,
+             np.ndarray[np.double_t,ndim=1] g):
+    cdef:
+        np.double_t f
+        Py_ssize_t i, j, n
+
+    n = x.shape[0]
+    i = 0
+    f = 0
+    while i < n:
+        g[i] = c[i]
+        j = 0
+        while j < n:
+            g[i] += Q[i,j] * x[j]
+            j += 1
+        f += .5 * (g[i] + c[i]) * x[i]
+        i += 1
+    return f, g

@@ -4,7 +4,7 @@ Created on 6 mar. 2015
 @author: jerome thai
 '''
 
-from c_extensions import isotonic_regression_c, isotonic_regression_multi_c, proj_simplex_c, proj_multi_simplex_c
+from c_extensions import isotonic_regression_c, isotonic_regression_multi_c, proj_simplex_c, proj_multi_simplex_c, quad_obj
 import numpy as np
 
 y = np.array([4.,5.,1.,6.,8.,7.])
@@ -33,4 +33,14 @@ proj_multi_simplex_c(y2, blocks)
 for i,e in enumerate([1., 0., 1., 0., 0., 1., 0.]):
     assert y2[i] == e
 
-print 'Yay! proj_simplex_c and proj_multi_simplex_c work fine!'
+
+x = np.array([4.4, 5.3])
+Q = 2 * np.array([[2, .5], [.5, 1]])
+c = np.array([1.0, 1.0])
+g = np.zeros(2)
+f, g = quad_obj(x, Q, c, g)
+assert abs(f - 99.83) < 1e-6 # f = .5*x'*Q*x + c'*x
+assert abs(g[0] - 23.9) + abs(g[1] - 16.0) < 1e-6 # g = Q*x + c
+
+
+print 'Yay! c_extensions work fine!'

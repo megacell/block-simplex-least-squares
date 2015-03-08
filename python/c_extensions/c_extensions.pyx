@@ -53,13 +53,13 @@ def isotonic_regression_c(np.ndarray[np.double_t,ndim=1] y,
 
 def isotonic_regression_multi_c(np.ndarray[np.double_t,ndim=1] y,
                                np.ndarray[np.double_t,ndim=1] weight, blocks):
+    cdef:
+        np.double_t numerator, denominator
+        Py_ssize_t i, j, pooled, k, start, end, n, num_blocks
     n = y.shape[0]
     num_blocks = blocks.shape[0]
     assert False not in ((blocks[1:]-blocks[:-1])>0), 'block indices not increasing'
     assert blocks[0]>=0 and blocks[-1]<n, 'indices out of range'
-    cdef:
-        np.double_t numerator, denominator
-        Py_ssize_t i, j, pooled, k, start, end
     j = 0
     while j < num_blocks:
         start = blocks[j]

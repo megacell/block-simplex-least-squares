@@ -1,14 +1,14 @@
 import unittest
 from sklearn.isotonic import IsotonicRegression
 import sys
-# sys.path.append('../../python/isotonic_regression/')
-from python.isotonic_regression.isotonic_regression import proj_PAV
-from python.isotonic_regression.isotonic_regression_c import isotonic_regression_c, isotonic_regression_multi_c
 
-__author__ = 'jeromethai'
+sys.path.append('../../')
+from python.c_extensions.python_implementation import proj_PAV
+from python.c_extensions.c_extensions import isotonic_regression_c, isotonic_regression_multi_c
 
 import numpy as np
 
+__author__ = 'jeromethai'
 
 class TestIsotonicRegression(unittest.TestCase):
 

@@ -5,7 +5,14 @@ import logging
 import numpy as np
 
 import solvers
+<<<<<<< HEAD
+import util
+#from c_extensions.simplex_projection import simplex_projection
+from c_extensions.c_extensions import isotonic_regression_c, isotonic_regression_multi_c
+# from projection import pysimplex_projection
+=======
 from bsls_utils import lsv_operator
+>>>>>>> origin/master
 import BB, LBFGS, DORE
 
 __author__ = 'cathywu'

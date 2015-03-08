@@ -1,5 +1,5 @@
 '''
-Created on 6 mar. 2015
+Created on 5 nov. 2014
 
 compile with command line 
 python setup.py build_ext --inplace
@@ -13,12 +13,8 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 
-sourcefiles = ["isotonic_regression_c.pyx"]
-name = "isotonic_regression_c"
-
-simplex_projection = Extension("simplex_projection",
-        sources = ["simplex_projection.c"],
-        include_dirs=[numpy.get_include()])
+sourcefiles = ["c_extensions.pyx"]
+name = "c_extensions"
 
 setup(
     cmdclass = {"build_ext" : build_ext},
@@ -26,5 +22,5 @@ setup(
             sourcefiles,
             include_dirs = [numpy.get_include()],
                         language = 'c++',
-            ), simplex_projection]
+            )]
 )

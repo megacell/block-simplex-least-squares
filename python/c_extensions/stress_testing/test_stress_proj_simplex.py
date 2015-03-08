@@ -4,7 +4,7 @@ import time
 __author__ = 'jeromethai'
 
 import sys
-sys.path.append('../../')
+sys.path.append('../../../')
 
 from python.c_extensions.c_extensions import proj_simplex_c, proj_multi_simplex_c
 from python.c_extensions.python_implementation import proj_simplex, proj_multi_simplex
@@ -12,7 +12,7 @@ from python.c_extensions.python_implementation import proj_simplex, proj_multi_s
 import numpy as np
 
 
-class TestStressProjSimplex():
+class TestStressProjSimplex(unittest.TestCase):
 
 
     def setUp(self):
@@ -65,8 +65,4 @@ class TestStressProjSimplex():
 
 
 if __name__ == '__main__':
-    do = TestStressProjSimplex()
-    do.test_proj_simplex()
-    do.test_proj_simplex_c()
-    do.test_proj_multi_simplex()
-    do.test_proj_multi_simplex_c()
+    unittest.main()

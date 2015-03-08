@@ -3,8 +3,8 @@ from sklearn.isotonic import IsotonicRegression
 import sys
 
 sys.path.append('../../')
-from python.c_extensions.python_implementation import proj_PAV
-from python.c_extensions.c_extensions import isotonic_regression_c, isotonic_regression_multi_c
+from python.isotonic_regression.isotonic_regression import proj_PAV
+from python.isotonic_regression.isotonic_regression_c import isotonic_regression_c, isotonic_regression_multi_c
 
 import numpy as np
 

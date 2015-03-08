@@ -2,6 +2,8 @@ import ipdb
 import sys
 import time
 import logging
+import warnings
+import functools
 
 import scipy.sparse
 import scipy.sparse.linalg
@@ -23,6 +25,22 @@ L_BFGS = 'L-BFGS'
 SPG = 'SPG'
 ADMM = 'ADMM'
 
+def deprecated(func):
+    '''This is a decorator which can be used to mark functions
+    as deprecated. It will result in a warning being emitted
+    when the function is used.'''
+
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+        warnings.warn_explicit(
+            "Call to deprecated function {}.".format(func.__name__),
+            category=Warning,
+            filename=func.func_code.co_filename,
+            lineno=func.func_code.co_firstlineno + 1
+        )
+        return func(*args, **kwargs)
+    return new_func
+
 # Convenience functions
 # -----------------------------------------------------------------------------
 
@@ -31,11 +49,11 @@ def is_sparse_matrix(A):
 
 def remove_zero_rows(M,x):
     nz = array(M.sum(axis=1).nonzero()[0])
-    return M[nz,:], x[nz]
+    return M[nz,:], x[nz], nz
 
 def remove_zero_cols(M,x):
     nz = array(M.sum(axis=0).nonzero()[1])
-    return M[:,nz], x[nz]
+    return M[:,nz], x[nz], nz
 
 def row(M,m):
     return M.tocsr()[m,:].tocoo()
@@ -141,69 +159,6 @@ def load_weights(filename,block_sizes,weight=1):
     blocks = [b/sum(b) for b in blocks]
     return weight*np.array([e for b in blocks for e in b])
 
-def EQ_block_sort(EQ,x,M):
-    """
-    Reorder columns by blocks of flow, given by EQ, e.g. OD flow or waypoint flow
-
-    :param EQ: incidence matrix for equality constraints
-    :param A:
-    :param x:
-    :param M: optional matrix that also need columns sorted accordingly
-    :return: rsort_index is the indices to reverse the sort
-    """
-    block_sizes = get_block_sizes(EQ)
-    rank = EQ.nonzero()[0]
-    sort_index = np.argsort(rank)
-    M = col(M,sort_index)
-    x = x[sort_index] # reorder
-    EQ = col(EQ,sort_index)
-    rsort_index = np.argsort(sort_index) # revert sort
-    return (EQ.tocsr(),x,M.tocsr(),block_sizes,rsort_index)
-
-def EQ_block_scale(EQ,EQx,x,M,m, thresh=1e-30, noisy=False):
-    """
-    Removes zero _blocks_ and scales matrices by block flow, given by EQ
-
-    :param EQ: incidence matrix for equality constraints
-    :param EQx: corresponding flow (EQ * x)
-    :param A:
-    :param x:
-    :param M: optional matrix that also needs columns scaled/zeroed accordingly
-    :param m: optional vector (M*x) that also need columns zeroed
-    :return:
-    """
-    scaling =  EQ.T.dot(EQx)
-    nz = (scaling > thresh).nonzero()[0]
-    x_split = np.nan_to_num(x / scaling)[nz]
-    scaling = scaling[nz]
-    DEQ = sps.diags([scaling],[0])
-    M, m = remove_zero_rows(col(M,nz).dot(DEQ),m)
-    EQ, EQx = remove_zero_rows(col(EQ, nz).tocsr(), EQx)
-    ones = np.ones(EQx.shape)
-    # EQ,EQx = remove_zero_rows(col(EQ, nz).dot(DEQ), EQx)
-    if not noisy:
-        assert la.norm(EQ.dot(x_split) - ones) < 1e-10,\
-            'Improper scaling: EQx != ones, norm: %s' % \
-            la.norm(EQ.dot(x_split) - ones)
-    return (EQ.tocsr(),ones,x_split,M.tocsr(),m,scaling)
-
-def direct_solve(M,m,x_split=None):
-    if M.shape[0] == M.shape[1]:
-        if M.size == 1:
-            x0 = array(m[0] / M[0,0]) if m[0] != 0 else 0
-        else:
-            x0 = sps.linalg.spsolve(M,m)
-        if x_split is not None:
-            error = np.linalg.norm(x0-x_split)
-            logging.info('Exact solution, error: %s' % error)
-    else:
-        print 'Direct solve (M,m) =  (%s, %s)' % (repr(M.shape), repr(m.shape))
-        x0 = sps.linalg.lsmr(M,m)[0]
-        if x_split is not None:
-            error = np.linalg.norm(x0-x_split)
-            logging.info('lsmr solution, error: %s' % error)
-    return x0
-
 
 def load(filename, A=False, b=False, x_true=False):
     data = sio.loadmat(filename)
@@ -226,244 +181,9 @@ def has_LP(data,LP):
     return LP and 'V' in data and 'g' in data and data['V'] is not None and \
            data['g'] is not None and data['V'].size > 0 and data['g'].size > 0
 
-def load_raw(data, full=False, L=True, OD=False, CP=False, LP=False,
-                 eq=None, init=False, thresh=1e-5, solve=False, damp=0.0,
-                 EQ_elim=True, noisy=False, output=None):
-    if output is None:
-        output = {}
-
-    # Load A,b if applicable
-    A, b, nz = None, None, None
-    if L and full and 'A_full' in data and 'b_full' in data:
-        A = sparse(data['A_full'])
-        b = array(data['b_full'])
-        if len(data['A'].shape) == 1:
-            A = A.T
-    elif L and 'A' in data and 'b' in data:
-        A = sparse(data['A'])
-        b = array(data['b'])
-        if len(data['A'].shape) == 1:
-            A = A.T
-    elif 'phi' in data and 'b' in data:
-        A = sparse(data['phi'])
-        b = array(data['b'])
-    if A is not None:
-        assert_scaled_incidence(A)
-    if 'b_full' in data:
-        output['nAllLinks'] = array(data['b_full']).size
-    if b is not None:
-        output['nLinks'] = b.size
-
-    # Load x_true
-    if 'x_true' in data:
-        x_true = array(data['x_true'])
-        if len(x_true.shape) == 0:
-            x_true = x_true.reshape((x_true.size))
-    elif 'real_a' in data:
-        x_true = array(data['real_a'])
-    else:
-        return NotImplemented
-
-    # Remove rows of zeros (unused sensors)
-    if A is not None:
-        nz = [i for i in xrange(A.shape[0]) if A[i,:].nnz == 0]
-        nnz = [i for i in xrange(A.shape[0]) if A[i,:].nnz > 0]
-        A, b = A[nnz,:], b[nnz]
-        if not noisy:
-            assert la.norm(A.dot(x_true) - b) < thresh, \
-                'Check data input: Ax != b, norm: %s' % la.norm(A.dot(x_true) - b)
-    AA,bb = A,b # Link constraints (NOTE: might still be None)
-
-    n = x_true.shape[0]
-
-    T,d,U,f = None, None, None, None
-    # OD-route
-    if has_OD(data,OD):
-        T,d = sparse(data['T']), array(data['d'])
-        assert_partial_simplex_incidence(T, n) # ASSERT
-        output['nOD'] = d.size
-        if solve:
-            AA,bb = (T,d) if AA is None else (sps.vstack([AA,T]), np.append(bb,d))
-    # Cellpath-route
-    if has_CP(data,CP):
-        U,f = sparse(data['U']), array(data['f'])
-        assert_simplex_incidence(U, n) # ASSERT
-        output['nCP'] = f.size
-        if solve:
-            AA,bb = (U,f) if AA is None else (sps.vstack([AA,U]), np.append(bb,f))
-    # Linkpath-route + add to AA,bb
-    if has_LP(data,LP):
-        V,g = sparse(data['V']), array(data['g'])
-        output['nLP'] = g.size
-        AA,bb = (V,g) if AA is None else (sps.vstack([AA,V]), np.append(bb,g))
-        logging.info('V: (%s,%s)' % (V.shape))
-
-    logging.info('A : (%s,%s)' % (A.shape if A is not None else (None,None)))
-    return AA, bb, x_true, T, d, U, f, nz, output
-
-def _process_eq_constraints(data, AA, bb, x_true, U, f, T, d, eq='CP',
-                            thresh=1e-5, noisy=False, OD=False, CP=False):
-    if eq == 'OD' and has_OD(data,OD):
-        if has_CP(data,CP):
-            AA,bb = (U,f) if AA is None else (sps.vstack([AA,U]), np.append(bb,f))
-            logging.info('T: %s, U: %s' % (T.shape, U.shape))
-        else:
-            logging.info('T: (%s,%s)' % (T.shape))
-        if AA is None:
-            return None,None,None,None,None,None,None,None
-        T,d,x_split,AA,bb,scaling = EQ_block_scale(T,d,x_true,AA,bb,noisy=noisy)
-        T,x_split,AA,block_sizes,rsort_index = EQ_block_sort(T,x_split,AA)
-        assert la.norm(T.dot(x_split) - d) < thresh, \
-            'Check eq constraint Tx != d, norm: %s' % la.norm(T.dot(x_split)-d)
-        return T, d, x_split, AA, bb, block_sizes, scaling, rsort_index
-    elif eq == 'CP' and has_CP(data,CP):
-        if has_OD(data,OD):
-            AA,bb = (T,d) if AA is None else (sps.vstack([AA,T]), np.append(bb,d))
-            logging.info('T: %s, U: %s' % (T.shape, U.shape))
-        else:
-            logging.info('U: (%s,%s)' % (U.shape))
-        if AA is None:
-            return None,None,None,None,None,None,None,None
-        U,f,x_split,AA,bb,scaling = EQ_block_scale(U,f,x_true,AA,bb,noisy=noisy)
-        U,x_split,AA,block_sizes,rsort_index = EQ_block_sort(U,x_split,AA)
-        if not noisy:
-            assert la.norm(U.dot(x_split) - f) < thresh, \
-                'Check eq constraint Ux != f, norm: %s' % la.norm(U.dot(x_split)-f)
-        return U, f, x_split, AA, bb, block_sizes, scaling, rsort_index
-    return NotImplemented
-
-def _solver_input_x(data, AA, bb, T, U, x_split, scaling, block_sizes, output, eq=None,
-                    OD=False, CP=False):
-    if eq == 'OD' and has_OD(data,OD):
-        return AA,bb,T,x_split,scaling,block_sizes,output
-    elif eq == 'CP' and has_CP(data,CP):
-        return AA,bb,U,x_split,scaling,block_sizes,output
-    else:
-        print 'Error: no eq constraint'
-        return AA,bb,None,x_split,scaling,block_sizes,output
-
-def _solver_init(data, T, d, U, f, x_split, block_sizes, init=False, eq='CP', OD=False,
-                 CP=False):
-    if init:
-        if eq == 'OD' and has_OD(data,OD):
-            x0 = direct_solve(T,d,x_split=x_split)
-        elif eq == 'CP' and has_CP(data,CP):
-            x0 = direct_solve(U,f,x_split=x_split)
-        else:
-            x0 = particular_x0(block_sizes)
-    else:
-        x0 = particular_x0(block_sizes)
-    return x0
 
 def particular_x0(block_sizes):
     return np.array(block_e(block_sizes - 1, block_sizes))
-
-def solver_input(data, full=False, L=True, OD=False, CP=False, LP=False,
-                 eq=None, init=False, thresh=1e-5, damp=0.0,
-                 EQ_elim=True, noisy=False, return_EQ=False):
-    """
-    Load data from file about network state
-
-    Notation:
-    x_true = route flow
-    x_split = route split
-
-    :param filename:
-    :param full: Use A_full, b_full instead of A,b
-    :param OD: Extract information from T
-    :param CP: Extract information from U
-    :param eq: None uses block_sizes to generate equality constraint; OD uses
-                T to generate equality constraint; CP uses U
-    :return:
-    """
-    # Link-route and route
-
-    # Load from data dict based on parameters
-    AA, bb, x_true, T, d, U, f, nz, output = load_raw(data, full=full, L=L,
-        OD=OD, CP=CP, LP=LP, eq=eq, init=init, thresh=thresh,
-        damp=damp, EQ_elim=EQ_elim, noisy=noisy)
-
-    # Process equality constraints: scale by block, remove zero blocks, reorder
-    block_sizes, rsort_index, x_split, scaling = None, None, None, None
-    if eq == 'OD' and has_OD(data,OD):
-        T, d, x_split, AA, bb, block_sizes, scaling, rsort_index = \
-                _process_eq_constraints(data, AA, bb, x_true, U, f, T, d, eq=eq,
-                                    thresh=thresh, noisy=noisy, OD=OD, CP=CP)
-    elif eq == 'CP' and has_CP(data,CP):
-        U, f, x_split, AA, bb, block_sizes, scaling, rsort_index = \
-            _process_eq_constraints(data, AA, bb, x_true, U, f, T, d, eq=eq,
-                                    thresh=thresh, noisy=noisy, OD=OD, CP=CP)
-
-    if AA is None or x_split is None:
-        output['error'] = "AA,bb is empty"
-        if not EQ_elim:
-            return None,None,None,None,None,output
-        return None,None,None,None,None,None,None,None,None,output
-    if not noisy:
-        assert la.norm(AA.dot(x_split) - bb) < thresh, \
-            'Improper scaling: AAx != bb, norm: %s' % la.norm(AA.dot(x_split) - bb)
-
-    if not EQ_elim:
-        return _solver_input_x(data, AA, bb, T, U, x_split, scaling,
-                               block_sizes, output, eq=eq, OD=OD, CP=CP)
-
-    logging.debug('Creating sparse N matrix')
-    # Generate N if possible, otherwise, compute the lsmr solution
-    if block_sizes is not None:
-        N = block_sizes_to_N(block_sizes)
-    else:
-        # In the case where there is no equality constraint, simply solve the
-        # objective via iterative method
-        N = None
-        x0 = sps.linalg.lsmr(AA,bb)[0]
-        return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output)
-
-    logging.info('AA : %s, blocks: %s' % \
-                 (AA.shape if AA is not None else None,
-                  block_sizes.shape if block_sizes is not None else None))
-
-    logging.debug('File loaded successfully')
-    x0 = _solver_init(data, T, d, U, f, x_split, block_sizes, init=init, eq=eq,
-                      OD=OD, CP=CP)
-
-    if return_EQ:
-        if eq == 'OD' and has_OD(data,OD):
-            return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index,
-                    x0, output, T)
-        elif eq == 'CP' and has_CP(data,CP):
-            return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index,
-                    x0, output, U)
-        else:
-            return NotImplemented
-    else:
-        return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0,
-                output)
-
-def load_data(filename,full=True,L=True,OD=True,CP=True,LP=True,eq=None,
-              init=False,thresh=1e-5, noisy=False):
-    """
-    Load data from file about network state
-
-    Notation:
-    x_true = route flow
-    x_split = route split
-
-    :param filename:
-    :param full: Use A_full, b_full instead of A,b
-    :param OD: Extract information from T
-    :param CP: Extract information from U
-    :param eq: None uses block_sizes to generate equality constraint; OD uses
-                T to generate equality constraint; CP uses U
-    :return:
-    """
-    logging.debug('Loading %s...' % filename)
-    data = sio.loadmat(filename)
-    logging.debug('Unpacking...')
-
-    AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output = \
-        solver_input(data,full=full,L=L,OD=OD,CP=CP,LP=LP,eq=eq,init=init,
-                     thresh=thresh,noisy=noisy)
-    return AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0, output
 
 def AN(A,N):
     # TODO port from preADMM.m (lines 3-21)
@@ -573,6 +293,24 @@ def mask(arr):
         masked[:len(arr[i]),i] = np.array(arr[i])
     return masked
 
+def stackMV(X,x,Y,y):
+    """
+    Stack matrix vector pair X,x on top of matrix vector pair Y,y
+    :param X:
+    :param x:
+    :param Y:
+    :param y:
+    :return:
+    """
+    if X is None:
+        return Y, y
+    elif Y is None:
+        return X, x
+    elif X is None and Y is None:
+        return None, None
+    else:
+        return sps.vstack([X,Y]), np.append(x,y)
+
 # Assert functions
 # -----------------------------------------------------------------------------
 
@@ -626,7 +364,8 @@ def assert_scaled_incidence(M,thresh=1e-12):
     assert (np.abs(array(col_sum) - array(col_nz) * entry_val) < thresh).all(), \
         'Not a proper scaled incidence matrix, check column entries'
 
-def generate_data(fname, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0):
+def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
+                  save=True):
     """
     A is m1 x n
     U is m2 x n
@@ -643,11 +382,24 @@ def generate_data(fname, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0):
     block_sizes = np.random.multinomial(n,np.ones(m2)/m2)
     x = np.concatenate([np.random.dirichlet(alpha*np.ones(bs)) for bs in \
                         block_sizes])
-    b = A.dot(x)
     U = ssla.block_diag(*[np.ones(bs) for bs in block_sizes])
-    f = U.dot(x)
-    scipy.io.savemat(fname, { 'A': A, 'b': b, 'x_true': x, 'U': U, 'f': f },
-                     oned_as='column')
+    f = np.floor(np.random.random(m2) * 1000)  # generate block scalings
+    x = U.T.dot(f) * x  # scale x up by block
+    b = A.dot(x)  # generate measurements
+    assert la.norm(U.dot(x)-f) < 1e-10, "Ux!=f"
+
+    # permute the columns of A,U, entries of x
+    reorder = np.random.permutation(n)
+    A = A[:, reorder]
+    U = U[:, reorder]
+    x = x[reorder]
+    assert la.norm(U.dot(x)-f) < 1e-10, "Ux!=f"
+    assert la.norm(A.dot(x)-b) < 1e-10, "Ax!=b"
+
+    data = { 'A': A, 'b': b, 'x_true': x, 'U': U, 'f': f }
+    if save:
+        scipy.io.savemat(fname, data, oned_as='column')
+    return data
 
 if __name__ == "__main__":
     x = np.array([1/6.,2/6.,3/6.,1,.5,.1,.4])
@@ -662,3 +414,4 @@ if __name__ == "__main__":
     #print z
     #print N.dot(z) +x0
     print init_xz(block_sizes, x)
+

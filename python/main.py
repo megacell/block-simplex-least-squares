@@ -16,7 +16,8 @@ from isotonic_regression.block_isotonic_regression import block_isotonic_regress
 # from python.isotonic_regression.simplex_projection import simplex_projection
 # from projection import pysimplex_projection
 from gradient_descent import GradientDescent
-from bsls_utils import load_data, x2z
+from bsls_utils import x2z, particular_x0
+from bsls_matrices import BSLSMatrices
 
 __author__ = 'cathywu'
 
@@ -70,7 +71,7 @@ def solve_in_z(A,b,x0,N,block_sizes,method):
         gd = GradientDescent(z0=z0, f=f, nabla_f=nabla_f, proj=proj,
                              method=method)
     iters, times, states = gd.run()
-    x = x0 + N.dot(states[-1])
+    x = particular_x0(block_sizes) + N.dot(states[-1])
     assert np.all(x >= 0), 'x shouldn\'t have negative entries after projection'
     return iters, times, states
 
@@ -146,19 +147,24 @@ def main(args=None,plot=False):
     if args.log in c.ACCEPTED_LOG_LEVELS:
         logging.basicConfig(level=eval('logging.'+args.log))
 
-    # load data
-    output=None
+    config = {
+        'full': True, 'L': True, 'OD': True, 'CP': True,
+        'LP': True, 'eq': args.eq, 'init': args.init,
+        }
 
-    A, b, N, block_sizes, x_true, nz, flow, rsort_index, x0, out = \
-        load_data(args.file, eq=args.eq, init=args.init)
+    # load data
+    bm = BSLSMatrices(fname=args.file, **config)
+    bm.degree_reduced_form()
+    AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0 = bm.get_LS()
+    output = bm.info
 
     if args.noise:
-        delta = np.random.normal(scale=b*args.noise)
-        b = b + delta
+        delta = np.random.normal(scale=bb*args.noise)
+        bb = bb + delta
 
-    iters, times, states = solve_in_z(A,b,x0,N,block_sizes,args.method)
-    x_last, error, output = LS_postprocess(states,x0,A,b,
-                                                x_true,scaling=flow,
+    iters, times, states = solve_in_z(AA,bb,x0,N,block_sizes,args.method)
+    x_last, error, output = LS_postprocess(states,x0,AA,bb,
+                                                x_split,scaling=scaling,
                                                 block_sizes=block_sizes,N=N,
                                                 output=output)
     if plot:
@@ -168,3 +174,4 @@ def main(args=None,plot=False):
 
 if __name__ == "__main__":
     iters, times, states, output = main()
+    print output

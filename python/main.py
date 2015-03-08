@@ -7,15 +7,16 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
+
 from sklearn.isotonic import IsotonicRegression
 
+import config as c
 from isotonic_regression.simplex_projection import simplex_projection
 from isotonic_regression.block_isotonic_regression import block_isotonic_regression
 # from python.isotonic_regression.simplex_projection import simplex_projection
 # from projection import pysimplex_projection
-import config as c
-from util import load_data, x2z
 from gradient_descent import GradientDescent
+from bsls_utils import load_data, x2z
 
 __author__ = 'cathywu'
 
@@ -35,7 +36,7 @@ def parser():
             help='Noise level')
     return parser
 
-def LS_solve(A,b,x0,N,block_sizes,method):
+def solve_in_z(A,b,x0,N,block_sizes,method):
     if block_sizes is not None and len(block_sizes) == A.shape[1]:
         logging.error('Trivial example: nblocks == nroutes, exiting solver')
         import sys
@@ -155,7 +156,7 @@ def main(args=None,plot=False):
         delta = np.random.normal(scale=b*args.noise)
         b = b + delta
 
-    iters, times, states = LS_solve(A,b,x0,N,block_sizes,args.method)
+    iters, times, states = solve_in_z(A,b,x0,N,block_sizes,args.method)
     x_last, error, output = LS_postprocess(states,x0,A,b,
                                                 x_true,scaling=flow,
                                                 block_sizes=block_sizes,N=N,

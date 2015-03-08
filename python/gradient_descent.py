@@ -1,4 +1,3 @@
-
 import ipdb
 import time
 import logging
@@ -6,12 +5,8 @@ import logging
 import numpy as np
 
 import solvers
-import util
-from c_extensions.simplex_projection import simplex_projection
-# from projection import pysimplex_projection
+from bsls_utils import lsv_operator
 import BB, LBFGS, DORE
-import config as c
-from util import load_data
 
 __author__ = 'cathywu'
 
@@ -60,7 +55,7 @@ class GradientDescent:
         elif self.method == 'DORE':
             # setup for DORE
             alpha = 0.99
-            lsv = util.lsv_operator(self.A, self.N)
+            lsv = lsv_operator(self.A, self.N)
             logging.info("Largest singular value: %s" % lsv)
             A_dore = self.A*alpha/lsv
             target_dore = self.target*alpha/lsv

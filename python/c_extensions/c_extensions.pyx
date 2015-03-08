@@ -139,3 +139,85 @@ def quad_obj(np.ndarray[np.double_t,ndim=1] x,
         f += .5 * (g[i] + c[i]) * x[i]
         i += 1
     return f, g
+
+
+# x is current estimate
+# f = f(x) objective at current estimate
+# g = nabla_f(x) gradient at current estimate
+# d is descent direction, d = x_new - x 
+# x_new, f_new, g_new are for x_new = x + d
+# performs backtracking line search between x and x_new
+# see: http://stanford.edu/~boyd/cvxbook/, section 9.2
+
+def line_search_quad_obj(np.ndarray[np.double_t,ndim=1] x,
+                         np.double_t f,
+                         np.ndarray[np.double_t,ndim=1] g,
+                         np.ndarray[np.double_t,ndim=1] x_new,
+                         np.double_t f_new,
+                         np.ndarray[np.double_t,ndim=1] g_new,
+                         np.ndarray[np.double_t,ndim=2] Q,
+                         np.ndarray[np.double_t,ndim=1] c):
+    cdef:
+        np.double_t t, suffDec, upper_line, progTol, max
+        Py_ssize_t i, j, n
+    
+    progTol = 1e-8
+    n = x.shape[0]
+    t = 1.
+    suffDec = 1e-4
+
+    # compute initial upper_line
+    upper_line = f
+    i = 0
+    while i < n:
+        upper_line += suffDec * g[i] * (x_new[i] - x[i])
+        i += 1
+
+    while f_new > upper_line:
+        t *= .5
+
+        # compute norm_inf of x - x_new
+        i = 0
+        max = 0
+        while i < n:
+            if x_new[i] - x[i] > max:
+                max = x_new[i] - x[i]
+            if x[i] - x_new[i] > max:
+                max = x[i] - x_new[i]
+            i += 1
+
+        # Check whether step has become too small
+        if t * max < progTol:
+            t = 0.
+            x_new = x
+            f_new = f
+            g_new = g
+            break
+        
+        # Compute new point
+        i = 0
+        while i < n:
+            x_new[i] = x[i] + t * (x_new[i] - x[i])
+            i += 1
+        
+        # compute objective and gradient at x_new
+        i = 0
+        f_new = 0
+        while i < n:
+            g_new[i] = c[i]
+            j = 0
+            while j < n:
+                g_new[i] += Q[i,j] * x_new[j]
+                j += 1
+            f_new += .5 * (g_new[i] + c[i]) * x_new[i]
+            i += 1
+
+        # compute upper_line at x_new
+        i = 0
+        upper_line = f
+        while i < n:
+            upper_line += suffDec * g[i] * (x_new[i] - x[i])
+            i += 1
+
+    return x_new, f_new, g_new, t
+

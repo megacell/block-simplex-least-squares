@@ -11,8 +11,7 @@ python/tmp/*
 
 # C extensions
 *.so
-proj_simplex_c.cpp
-isotonic_regression_c.cpp
+c_extensions.cpp
 
 # Packages
 *.egg

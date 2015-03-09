@@ -91,6 +91,119 @@ def isotonic_regression_multi_c(np.ndarray[double,ndim=1] y, blocks):
         l += 1
 
 
+def isotonic_regression_c_2(np.ndarray[np.double_t,ndim=1] y, start, end):
+    cdef:
+        double numerator, previous
+        int i, j, e, pooled, n, k, denominator
+    n = y.shape[0]
+    assert start>=0 and start<n and end>0 and end<=n
+    if start >= end: return y
+    cdef np.ndarray[np.int_t, ndim=1] weight = np.empty(n, dtype=np.int)
+    i = 0
+    while i < n:
+        weight[i] = 1
+        i += 1
+    e = end
+    while 1:
+        # repeat until there are no more adjacent violators.
+        i = start
+        pooled = 0
+        while i < e:
+            k = i + weight[i]
+            previous = y[i]
+            while k < e and y[k] <= previous:
+                previous = y[k]
+                k += weight[k]
+            if y[i] != previous:
+                # y[i:k + 1] is a decreasing subsequence, so
+                # replace each point in the subsequence with the
+                # weighted average of the subsequence.
+                numerator = 0.0
+                denominator = 0
+                j = i
+                while j < k:
+                    numerator += y[j] * weight[j]
+                    denominator += weight[j]
+                    j += weight[j]
+                y[i] = numerator / denominator
+                weight[i] = denominator
+                pooled = 1
+            i = k
+        # Check for convergence
+        if pooled == 0: break
+     
+    i = start
+    while i < e:
+        k = i + weight[i]
+        j = i + 1
+        while j < k:
+            y[j] = y[i]
+            j += 1
+        i = k
+
+    return y
+
+
+def isotonic_regression_multi_c_2(np.ndarray[double,ndim=1] y, blocks):
+
+    cdef:
+        double numerator, previous
+        int i, j, k, l, pooled, start, end, n, num_blocks, denominator
+    n = y.shape[0]
+    num_blocks = blocks.shape[0]
+    assert False not in ((blocks[1:]-blocks[:-1])>0), 'block indices not increasing'
+    assert blocks[0]>=0 and blocks[-1]<n, 'indices out of range'
+    cdef np.ndarray[np.int_t, ndim=1] weight = np.empty(n, dtype=np.int)
+    i = 0
+    while i < n:
+        weight[i] = 1
+        i += 1
+    l = 0
+    while l < num_blocks:
+        start = blocks[l]
+        end = n
+        if l < num_blocks-1: end = blocks[l+1]
+        while 1:
+            # repeat until there are no more adjacent violators.
+            i = start
+            pooled = 0
+            while i < end:
+                k = i + weight[i]
+                previous = y[i]
+                while k < end and y[k] <= previous:
+                    previous = y[k]
+                    k += weight[k]
+                if y[i] != previous:
+                    # y[i:k + 1] is a decreasing subsequence, so
+                    # replace each point in the subsequence with the
+                    # weighted average of the subsequence.
+                    numerator = 0.0
+                    denominator = 0
+                    j = i
+                    while j < k:
+                        numerator += y[j] * weight[j]
+                        denominator += weight[j]
+                        j += weight[j]
+                    y[i] = numerator / denominator
+                    weight[i] = denominator
+                    pooled = 1
+                i = k
+            # Check for convergence
+            if pooled == 0: break
+        l += 1
+
+    i = 0
+    while i < n:
+        k = i + weight[i]
+        j = i + 1
+        while j < k:
+            y[j] = y[i]
+            j += 1
+        i = k
+
+    return y
+
+
 cdef extern from "arrays.h":
     void proj_simplex(double *y, int start, int end)
     void proj_multi_simplex_hack(double *y, double *blocks, int numblocks, int n)

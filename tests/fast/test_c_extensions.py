@@ -2,7 +2,8 @@ import unittest
 import sys
 
 sys.path.append('../../')
-from python.c_extensions.c_extensions import quad_obj, line_search_quad_obj
+from python.c_extensions.c_extensions import quad_obj, line_search_quad_obj, x2z_c, z2x_c
+from python.bsls_utils import almost_equal
 from cvxopt import matrix
 
 import numpy as np
@@ -17,7 +18,7 @@ class testCvxSolverExtensions(unittest.TestCase):
 
 
     def test_quad_obj(self):
-    	for n in range(2,10):
+        for n in range(2,10):
             x = 2*np.random.rand(n) - 1
             Q = 2*np.random.rand(n,n) - 1
             c = 2*np.random.rand(n) - 1
@@ -39,10 +40,10 @@ class testCvxSolverExtensions(unittest.TestCase):
 
 
     def test_line_search(self):
-    	Q = 2 * np.array([[2, .5], [.5, 1]])
+        Q = 2 * np.array([[2, .5], [.5, 1]])
         c = np.array([1.0, 1.0])
-    	# test 1
-    	x, f, g = np.array([0.5, 0.5]), 2., np.array([3.5, 2.5])
+        # test 1
+        x, f, g = np.array([0.5, 0.5]), 2., np.array([3.5, 2.5])
         x_new, f_new, g_new = np.array([0., 1.]), 2., np.array([2., 3.])
         x_true, f_true, g_true = np.array([0.25, 0.75]), 1.875, np.array([2.75, 2.75])
         t_true = 0.5
@@ -58,6 +59,21 @@ class testCvxSolverExtensions(unittest.TestCase):
         x_true, f_true, g_true = np.array([0.2559375, 0.7440625]), 1.87507050781, np.array([2.7678125, 2.7440625])
         t_true = 0.125
         self.helper(x, f, g, x_new, f_new, g_new, x_true, f_true, g_true, t_true, Q, c)
+
+
+    def test_x2z_z2x_c(self):
+        xs = [[.6, .1, .3], [.5, .5, .2, .8], [1., .6, .1, .3]]
+        zs = [[.6, .7], [.5, .2], [.6, .7]]
+        bs = [[0], [0, 2], [0, 1]]
+        for x_true, z_true, b in zip(xs, zs, bs):
+            x = np.array(x_true)
+            z = np.zeros(len(z_true))
+            blocks = np.array(b)
+            x2z_c(x, z, blocks)
+            assert almost_equal(z, z_true)
+            x = np.zeros(len(x_true))
+            z2x_c(x, z, blocks)
+            assert almost_equal(x, x_true)
 
 
 

@@ -334,3 +334,59 @@ def line_search_quad_obj(np.ndarray[np.double_t,ndim=1] x,
 
     return x_new, f_new, g_new, t
 
+
+def x2z_c(np.ndarray[np.double_t,ndim=1] x,
+           np.ndarray[np.double_t,ndim=1] z,
+           blocks):
+    cdef:
+        int i, j, k, n, start, end, num_blocks
+        double tmp
+    n = x.shape[0]
+    assert False not in ((blocks[1:]-blocks[:-1])>0)
+    assert blocks[0] == 0 and blocks[-1]<n
+    k = 0
+    j = 0
+    num_blocks = blocks.shape[0]
+
+    while k < num_blocks:
+        start = blocks[k]
+        end = n
+        if k < num_blocks-1: end = blocks[k+1]
+        i = start
+        tmp = 0.0
+        while i < end - 1:
+            tmp += x[i]
+            z[j] = tmp
+            j += 1
+            i += 1
+        k += 1
+    return z
+
+
+def z2x_c(np.ndarray[np.double_t,ndim=1] x,
+           np.ndarray[np.double_t,ndim=1] z,
+           blocks):
+    cdef:
+        int i, j, k, n, start, end, num_blocks
+        double tmp
+    n = x.shape[0]
+    assert False not in ((blocks[1:]-blocks[:-1])>0)
+    assert blocks[0] == 0 and blocks[-1]<n
+    k = 0
+    j = 0
+    num_blocks = blocks.shape[0]
+    while k < num_blocks:
+        start = blocks[k]
+        end = n
+        if k < num_blocks-1: end = blocks[k+1]
+        i = start
+        tmp = 0.0
+        while i < end-1:
+            x[i] = z[j] - tmp
+            tmp = z[j]
+            i += 1
+            j += 1
+        x[end-1] = 1.0 - tmp
+        k += 1
+    return x
+

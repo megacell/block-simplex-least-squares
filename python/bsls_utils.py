@@ -25,6 +25,8 @@ L_BFGS = 'L-BFGS'
 SPG = 'SPG'
 ADMM = 'ADMM'
 
+EPS = 1e-8
+
 def deprecated(func):
     '''This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted
@@ -77,6 +79,10 @@ def sparse(A):
 def all_equal(x,y):
     return np.all(np.equal(x,y))
 
+# Check if all entries approximately equal
+def almost_equal(x,y):
+    return np.linalg.norm(x-y) < EPS
+
 # Check if ndarray consists of all ones
 def is_ones(x):
     return np.all(x == np.ones(x.shape))
@@ -97,6 +103,17 @@ def block_J(Js):
 def get_block_sizes(U):
     # Sum along rows
     return array((U>0).sum(axis=1)).astype(int)
+
+
+def block_starts_to_block_sizes(block_starts, n):
+    """! block_starts on containt the first index of each block
+    n is the dimensionality of x
+    """
+    assert False not in ((block_starts[1:]-block_starts[:-1])>0)
+    assert block_starts[0] == 0 and block_starts[-1] < n
+    block_starts = np.array(block_starts)
+    return np.append(block_starts[1:], [n]) - block_starts
+
 
 def block_sizes_to_x0(block_sizes):
     """Converts a list of the block sizes to a scipy.sparse vector x0

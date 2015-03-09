@@ -16,6 +16,11 @@ __author__ = 'jeromethai'
 
 class TestIsotonicRegression(unittest.TestCase):
 
+    def setUp(self):
+        # The setup code is run before each test
+        seed = 237423433
+        np.random.seed(seed)
+
 
     def sklearn_isotonic_regression_multi(self, y, blocks):
         ir = IsotonicRegression()

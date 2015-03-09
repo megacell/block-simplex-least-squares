@@ -23,11 +23,11 @@ def isotonic_regression_c(np.ndarray[np.double_t,ndim=1] y,
     n = y.shape[0]
     assert start>=0 and start<n and end>0 and end<=n
     if start >= end: return y
+    end -= 1
     while 1:
         # repeat until there are no more adjacent violators.
         i = start
         pooled = 0
-        end -= 1
         while i < end:
             k = i
             while k < end and y[k] >= y[k + 1]:
@@ -65,12 +65,11 @@ def isotonic_regression_multi_c(np.ndarray[np.double_t,ndim=1] y,
         start = blocks[j]
         end = n
         if j < num_blocks-1: end = blocks[j+1]
-        
+        end -= 1
         while 1:
             # repeat until there are no more adjacent violators.
             i = start
             pooled = 0
-            end -= 1
             while i < end:
                 k = i
                 while k < end and y[k] >= y[k + 1]:

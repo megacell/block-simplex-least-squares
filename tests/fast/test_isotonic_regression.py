@@ -19,8 +19,8 @@ class TestIsotonicRegression(unittest.TestCase):
         n = len(y)
         x = np.arange(n)
         z = np.zeros(n)
+        z[:blocks[0]] = y[:blocks[0]]
         for start, end in zip(blocks, np.append(blocks[1:], [n])):
-            z[start:] = y[start:]
             z[start:end] = ir.fit_transform(x[start:end], y[start:end])
         return z
 
@@ -55,8 +55,7 @@ class TestIsotonicRegression(unittest.TestCase):
             blocks = np.sort(np.random.choice(n, 3, replace=False))
             truth = self.sklearn_isotonic_regression_multi(y, blocks)
             isotonic_regression_multi_c(y, blocks)
-            #print np.linalg.norm(y-truth)
-            #assert np.linalg.norm(y-truth) < 1e-8
+            assert np.linalg.norm(y-truth) < 1e-8
 
 
 

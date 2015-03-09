@@ -12,6 +12,8 @@ python/tmp/*
 # C extensions
 *.so
 c_extensions.cpp
+c_extensions.c
+c_extensions.html
 
 # Packages
 *.egg

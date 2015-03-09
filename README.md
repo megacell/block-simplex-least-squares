@@ -62,10 +62,6 @@ To bind Cythonic extensions to Python
     python setup.py build_ext --inplace 
 
 check if it created an executable 'c_extensions.so' and 'c_extensions.cpp'
-now run this to test the implementation
-
-    python check_extensions.py
-
 
 Running via MATLAB
 -------------------

@@ -61,7 +61,7 @@ def solve_in_z(A,b,x0,N,block_sizes,method):
     def proj(x):
         #return block_isotonic_regression(x, ir, block_sizes, blocks_start,
         #                                 blocks_end)
-        return isotonic_regression_multi_c_2(x, blocks_start)
+        return isotonic_regression_multi_c_2(x, blocks_start[:-1])
         # value = simplex_projection(block_sizes - 1,x)
         # value = pysimplex_projection(block_sizes - 1,x)
         # return projected_value

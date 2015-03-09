@@ -11,8 +11,9 @@ import numpy.linalg as la
 from sklearn.isotonic import IsotonicRegression
 
 import config as c
-from isotonic_regression.simplex_projection import simplex_projection
-from isotonic_regression.block_isotonic_regression import block_isotonic_regression
+#from isotonic_regression.simplex_projection import simplex_projection
+#from isotonic_regression.block_isotonic_regression import block_isotonic_regression
+from c_extensions.c_extensions import isotonic_regression_multi_c_2
 # from python.isotonic_regression.simplex_projection import simplex_projection
 # from projection import pysimplex_projection
 from gradient_descent import GradientDescent
@@ -58,8 +59,9 @@ def solve_in_z(A,b,x0,N,block_sizes,method):
     blocks_end = cum_blocks[1:]
 
     def proj(x):
-        return block_isotonic_regression(x, ir, block_sizes, blocks_start,
-                                         blocks_end)
+        #return block_isotonic_regression(x, ir, block_sizes, blocks_start,
+        #                                 blocks_end)
+        return isotonic_regression_multi_c_2(x, blocks_start)
         # value = simplex_projection(block_sizes - 1,x)
         # value = pysimplex_projection(block_sizes - 1,x)
         # return projected_value

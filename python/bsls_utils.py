@@ -191,7 +191,7 @@ def AN(A,N):
 
 def lsv_operator(A, N):
     """Computes largest singular value of AN
-    
+
     Computation is done without computing AN or (AN)^T(AN)
     by using functions that act as these linear operators on a vector
     """
@@ -261,7 +261,7 @@ def init_xz(block_sizes, x_true):
     x1 = np.divide(x1, \
                    np.concatenate([np.sum(x1[i:j])*np.ones((k,1)) for i, j, k \
                                    in zip(ind_start,ind_end,block_sizes)]))
-    
+
     tmp = np.concatenate([np.argsort(np.argsort(x_true[i:j])) for i,j in \
                           zip(ind_start,ind_end)]) + 1
     x2 = np.divide(tmp, \
@@ -276,12 +276,12 @@ def init_xz(block_sizes, x_true):
                                                                ind_end,
                                                                block_sizes)])))
     x4 = np.concatenate([(1./k)*np.ones((k,1)) for k in block_sizes])
-    
+
     z1 = x2z(x1, block_sizes)
     z2 = x2z(x2, block_sizes)
     z3 = x2z(x3, block_sizes)
     z4 = x2z(x4, block_sizes)
-    
+
     return x1,x2,x3,x4,z1,z2,z3,z4
 
 def mask(arr):
@@ -365,7 +365,7 @@ def assert_scaled_incidence(M,thresh=1e-12):
         'Not a proper scaled incidence matrix, check column entries'
 
 def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
-                  save=True):
+                  tolerance=1e-10):
     """
     A is m1 x n
     U is m2 x n
@@ -379,39 +379,40 @@ def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
     :return:
     """
     A = (np.random.random((m1, n)) > A_sparse).astype(np.float)
-    block_sizes = np.random.multinomial(n,np.ones(m2)/m2)
+    block_sizes = np.random.multinomial(n-m2,np.ones(m2)/m2) + np.ones(m2)
+    assert sum(block_sizes) == n, 'all-zero row present!'
     x = np.concatenate([np.random.dirichlet(alpha*np.ones(bs)) for bs in \
                         block_sizes])
     U = ssla.block_diag(*[np.ones(bs) for bs in block_sizes])
     f = np.floor(np.random.random(m2) * 1000)  # generate block scalings
     x = U.T.dot(f) * x  # scale x up by block
     b = A.dot(x)  # generate measurements
-    assert la.norm(U.dot(x)-f) < 1e-10, "Ux!=f"
+    assert la.norm(U.dot(x)-f) < tolerance, "Ux!=f"
+    assert la.norm(A.dot(x)-b) < tolerance, "Ax!=b"
 
     # permute the columns of A,U, entries of x
     reorder = np.random.permutation(n)
     A = A[:, reorder]
     U = U[:, reorder]
     x = x[reorder]
-    assert la.norm(U.dot(x)-f) < 1e-10, "Ux!=f"
-    assert la.norm(A.dot(x)-b) < 1e-10, "Ax!=b"
+    assert la.norm(U.dot(x)-f) < tolerance, "Ux!=f after permuting"
+    assert la.norm(A.dot(x)-b) < tolerance, "Ax!=b after permuting"
 
     data = { 'A': A, 'b': b, 'x_true': x, 'U': U, 'f': f }
-    if save:
+    if fname:
         scipy.io.savemat(fname, data, oned_as='column')
     return data
 
 if __name__ == "__main__":
     x = np.array([1/6.,2/6.,3/6.,1,.5,.1,.4])
-    
+
     print "Demonstration of convenience functions (x2z, x2z)"
     block_sizes = np.array([3,1,3])
     z = x2z(x, block_sizes)
     x0 = block_sizes_to_x0(block_sizes)
     N = block_sizes_to_N(block_sizes)
-    
+
     #print x
     #print z
     #print N.dot(z) +x0
     print init_xz(block_sizes, x)
-

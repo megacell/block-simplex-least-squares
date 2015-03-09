@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <cstddef>
+#include <algorithm>
 
 using std::cout;
 using std::endl;
@@ -33,8 +34,8 @@ Projects the subvector between start and end on the simplex
     }
     for (i = start; i < end; i++) {
         y[i] = std::max(lambda + y[i], 0.);
-    }   
-  
+    }
+
 }
 
 
@@ -46,7 +47,7 @@ constains the first index of each block and n the length of the array
     int i;
     for (i = 0; i < numblocks-1; i++) {
         proj_simplex(y, blocks[i], blocks[i+1]);
-    } 
+    }
     proj_simplex(y, blocks[numblocks-1], n);
 }
 
@@ -59,7 +60,7 @@ constains the first index of each block and n the length of the array
     int i;
     for (i = 0; i < numblocks-1; i++) {
         proj_simplex(y, (int)blocks[i], (int)blocks[i+1]);
-    } 
+    }
     proj_simplex(y, (int)blocks[numblocks-1], n);
 }
 

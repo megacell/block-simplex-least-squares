@@ -50,12 +50,11 @@ class TestStressIsotonicRegression(unittest.TestCase):
     def test_isotonic_regression_c(self):
         self.setUp()
         times = []
+        rs = check_random_state(0)
         for n in [int(1e3), int(1e4), int(1e5), int(1e6)]:
-            rs = check_random_state(0)
             y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
-            w = np.ones(n)
             start_time = time.time()
-            isotonic_regression_c(y, w, 0, n)
+            isotonic_regression_c(y, 0, n)
             times.append(time.time() - start_time)
         print 'test isotonic_regression_c'
         print times
@@ -64,14 +63,13 @@ class TestStressIsotonicRegression(unittest.TestCase):
     def test_isotonic_regression_multi_c(self):
         self.setUp()
         n = int(1e6)
-        w = np.ones(n)
         times = []
+        rs = check_random_state(0)
         for num_blocks in [int(1e1), int(1e2), int(1e3), int(1e4)]:
-            rs = check_random_state(0)
             y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
             blocks = np.sort(np.random.choice(n, num_blocks, replace=False))
             start_time = time.time()
-            isotonic_regression_multi_c(y, w, blocks)
+            isotonic_regression_multi_c(y, blocks)
             times.append(time.time() - start_time)
         print 'test isotonic_regression_multi_c'
         print times

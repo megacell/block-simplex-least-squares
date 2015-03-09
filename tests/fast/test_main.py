@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 
 from python.main import main
-from python.util import generate_data
+from python.bsls_utils import generate_data
 
 __author__ = 'cathywu'
 

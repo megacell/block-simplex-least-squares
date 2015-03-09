@@ -32,10 +32,10 @@ class TestUtil(unittest.TestCase):
         self.assertTrue(np.all(ans==x0))
 
     def test_generate_data(self):
-        data = util.generate_data(None, save=False)
+        data = util.generate_data()
         self.assertTrue(abs(sum(data['f']) - sum(data['x_true'])) < self.eps)
 
-        data = util.generate_data(None, save=False, A_sparse=0.9)
+        data = util.generate_data(A_sparse=0.9)
         self.assertTrue(abs(sum(data['f']) - sum(data['x_true'])) < self.eps)
 
 

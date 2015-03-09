@@ -23,7 +23,7 @@ class TestBSLSMatrices(unittest.TestCase):
             }
 
     def test_simple_simplex_form(self):
-        data = util.generate_data(None, save=False)
+        data = util.generate_data()
         bm = BSLSMatrices(data=data, **self.config)
 
         # Check feasibility after each step
@@ -60,7 +60,7 @@ class TestBSLSMatrices(unittest.TestCase):
             self.assertTrue(abs(sum(bm.x_split[s:e])-1) < self.eps)
 
     def test_reconstruct(self):
-        data = util.generate_data(None, save=False)
+        data = util.generate_data()
 
         # zero out the first row of A
         n = data['x_true'].size
@@ -87,7 +87,7 @@ class TestBSLSMatrices(unittest.TestCase):
         self.assertTrue(la.norm(data['x_true'] - x_true) < self.eps)
 
     def test_get_LS(self):
-        data = util.generate_data(None, save=False)
+        data = util.generate_data()
         bm = BSLSMatrices(data=data, **self.config)
         bm.degree_reduced_form()
         AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index, x0 = bm.get_LS()

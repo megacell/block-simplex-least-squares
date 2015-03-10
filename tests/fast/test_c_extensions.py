@@ -10,7 +10,7 @@ import numpy as np
 
 __author__ = 'jeromethai'
 
-class testCvxSolverExtensions(unittest.TestCase):
+class TestCythonExtensions(unittest.TestCase):
 
     def setUp(self):
         seed = 237423433
@@ -23,7 +23,8 @@ class testCvxSolverExtensions(unittest.TestCase):
             Q = 2*np.random.rand(n,n) - 1
             c = 2*np.random.rand(n) - 1
             g = np.zeros(n)
-            f, g = quad_obj(x, Q, c, g)
+            #f, g = quad_obj(x, Q, c, g)
+            f = quad_obj(x, Q, c, g)[0]
             x, Q, c = matrix(x), matrix(Q), matrix(c)
             f2 = (.5 * x.T * Q * x + c.T * x)[0]
             g2 = Q * x + c
@@ -32,7 +33,8 @@ class testCvxSolverExtensions(unittest.TestCase):
 
 
     def helper(self, x, f, g, x_new, f_new, g_new, x_true, f_true, g_true, t_true, Q, c):
-        x_new, f_new, g_new, t = line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q, c)
+        # x_new, f_new, g_new, t = line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q, c)
+        _, f_new, _, t = line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q, c)
         assert np.linalg.norm(x_new - x_true) < 1e-8
         assert abs(f_new - f_true) < 1e-8
         assert np.linalg.norm(g_new - g_true) < 1e-8

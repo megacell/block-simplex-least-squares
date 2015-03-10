@@ -12,7 +12,7 @@ from python.bsls_utils import almost_equal
 
 __author__ = 'jeromethai'
 
-class TestBatch(unittest.TestCase):
+class TestStressBatch(unittest.TestCase):
   
 
     def setUp(self):
@@ -33,25 +33,24 @@ class TestBatch(unittest.TestCase):
         precision_batch = []
         for n in [10, 100, 300]: # dimension of features
             m = 1.5*n # number of measurements
-            A = matrix(np.random.randn(m, n))
+            A = np.random.randn(m, n)
             x_true = abs(np.random.randn(n,1))
             x_true = x_true / np.linalg.norm(x_true, 1)
-            b = A*matrix(x_true)
-            Q = A.T * A
-            c = -A.T*b
+            b = A.dot(x_true)
+            Q = A.T.dot(A)
+            c = -A.T.dot(b)
             G = spdiag([-1.0]*n)
             h = matrix([1.]*n, (n,1))
             U = matrix([1.]*n, (1,n))
             f = matrix(1.0)
             start_time = time.time()
-            sol = solvers.qp(Q, c, G, h, U, f)
+            sol = solvers.qp(matrix(Q), matrix(c), G, h, U, f)
             times_cvxopt.append(time.time() - start_time)
             iters_cvxopt.append(sol['iterations'])
             precision_cvxopt.append(np.linalg.norm(sol['x']-x_true))
             #assert almost_equal(sol['x'], x_true, 1e-6)
+            c = c.flatten()
 
-            Q = np.array(Q)
-            c = np.array(c).flatten()
             x0 = np.ones(n) / n
 
             def proj(x):
@@ -60,11 +59,17 @@ class TestBatch(unittest.TestCase):
             def line_search(x, f, g, x_new, f_new, g_new):
                 return line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q, c)
 
-            def obj(x, g):
+            def obj_c(x, g):
                 return quad_obj(x, Q, c, g)
+
+            def obj_np(x, g):
+                np.copyto(g, Q.dot(x) + c)
+                f = .5 * x.T.dot(g + c)
+                return f, g
+
             x_true = x_true.flatten()
             start_time = time.time()
-            sol = batch.solve(obj, proj, line_search, x0)
+            sol = batch.solve(obj_np, proj, line_search, x0)
             times_batch.append(time.time() - start_time)
             precision_batch.append(np.linalg.norm(sol['x']-x_true))
             iters_batch.append(sol['iterations'])

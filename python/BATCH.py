@@ -42,6 +42,7 @@ def solve(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
         # update and project x
         start_time = time.time()
         np.add(x, -g, x_new) # should update content of x_new
+        #x_new = x-g
         t_add += time.time() - start_time
         start_time = time.time()
         proj(x_new)
@@ -59,6 +60,8 @@ def solve(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
         f = f_new
         np.copyto(x, x_new)
         np.copyto(g, g_new)
+        #x = x_new
+        #g = g_new
         t_copy += time.time() - start_time
         i += 1
     return {'f': f, 'x': x, 'stop': stop, 'iterations': i, 'times': [t_stop, t_add, t_proj, t_obj, t_line, t_copy]}

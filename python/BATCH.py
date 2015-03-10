@@ -52,7 +52,7 @@ def solve(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
         t_obj += time.time() - start_time
         # do line search between x and x_new, should update x_new, g_new
         start_time = time.time()
-        x_new, f_new, g_new, t = line_search(x, f, g, x_new, f_new, g_new)
+        f_new, t = line_search(x, f, g, x_new, f_new, g_new)
         t_line += time.time() - start_time
         # take step
         start_time = time.time()

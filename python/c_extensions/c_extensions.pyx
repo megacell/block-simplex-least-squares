@@ -233,7 +233,7 @@ def quad_obj(np.ndarray[np.double_t,ndim=1] x,
              np.ndarray[np.double_t,ndim=1] Q,
              np.ndarray[np.double_t,ndim=1] c,
              np.ndarray[np.double_t,ndim=1] g):
-             
+
     return quad_obj_c(<np.double_t*> x.data, 
                       <np.double_t*> Q.data, 
                       <np.double_t*> c.data, 
@@ -269,20 +269,34 @@ def line_search_quad_obj(np.ndarray[np.double_t,ndim=1] x,
                          np.ndarray[np.double_t,ndim=1] x_new,
                          np.double_t f_new,
                          np.ndarray[np.double_t,ndim=1] g_new,
-                         np.ndarray[np.double_t,ndim=2] Q,
+                         np.ndarray[np.double_t,ndim=1] Q,
                          np.ndarray[np.double_t,ndim=1] c):
-    cdef:
-        np.double_t t, suffDec, upper_line, progTol, max
-        Py_ssize_t i, j, n
-    
-    progTol = 1e-8
-    n = x.shape[0]
-    t = 1.
-    suffDec = 1e-4
 
+    return line_search_quad_obj_c(<np.double_t*> x.data, 
+                                  f,
+                                  <np.double_t*> g.data,
+                                  <np.double_t*> x_new.data, 
+                                  f_new,
+                                  <np.double_t*> g_new.data,
+                                  <np.double_t*> Q.data,
+                                  <np.double_t*> c.data,
+                                  x.shape[0])
+
+
+cdef line_search_quad_obj_c(np.double_t* x, 
+                            np.double_t f,
+                            np.double_t* g,
+                            np.double_t* x_new, 
+                            np.double_t f_new,
+                            np.double_t* g_new,
+                            np.double_t* Q,
+                            np.double_t* c,
+                            Py_ssize_t n):
+    cdef:
+        np.double_t t = 1., suffDec = 1e-4, upper_line = f, progTol = 1e-8, max
+        Py_ssize_t i = 0, j, k
+    
     # compute initial upper_line
-    upper_line = f
-    i = 0
     while i < n:
         upper_line += suffDec * g[i] * (x_new[i] - x[i])
         i += 1
@@ -292,7 +306,7 @@ def line_search_quad_obj(np.ndarray[np.double_t,ndim=1] x,
 
         # compute norm_inf of x - x_new
         i = 0
-        max = 0
+        max = 0.0
         while i < n:
             if x_new[i] - x[i] > max:
                 max = x_new[i] - x[i]
@@ -323,8 +337,9 @@ def line_search_quad_obj(np.ndarray[np.double_t,ndim=1] x,
         while i < n:
             g_new[i] = c[i]
             j = 0
+            k = i*n
             while j < n:
-                g_new[i] += Q[i,j] * x_new[j]
+                g_new[i] += Q[k+j] * x_new[j]
                 j += 1
             f_new += .5 * (g_new[i] + c[i]) * x_new[i]
             i += 1
@@ -335,8 +350,7 @@ def line_search_quad_obj(np.ndarray[np.double_t,ndim=1] x,
         while i < n:
             upper_line += suffDec * g[i] * (x_new[i] - x[i])
             i += 1
-
-    return x_new, f_new, g_new, t
+    return f_new, t
 
 
 def x2z_c(np.ndarray[np.double_t,ndim=1] x,

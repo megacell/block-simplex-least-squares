@@ -58,7 +58,7 @@ class TestStressBatch(unittest.TestCase):
                 proj_simplex_c(x, 0, n)
 
             def line_search(x, f, g, x_new, f_new, g_new):
-                return line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q, c)
+                return line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q_flat, c)
 
             def obj_c(x, g):
                 return quad_obj(x, Q_flat, c, g)

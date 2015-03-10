@@ -230,26 +230,30 @@ def proj_multi_simplex_c(np.ndarray[np.double_t,ndim=1] y, blocks):
 
 
 def quad_obj(np.ndarray[np.double_t,ndim=1] x,
-             np.ndarray[np.double_t,ndim=2] Q,
+             np.ndarray[np.double_t,ndim=1] Q,
              np.ndarray[np.double_t,ndim=1] c,
              np.ndarray[np.double_t,ndim=1] g):
+             
+    return quad_obj_c(<np.double_t*> x.data, 
+                      <np.double_t*> Q.data, 
+                      <np.double_t*> c.data, 
+                      <np.double_t*> g.data, 
+                      x.shape[0])
+
+
+cdef quad_obj_c(np.double_t* x, np.double_t* Q, 
+                np.double_t* c, np.double_t* g, Py_ssize_t n):
     cdef:
         np.double_t f
-        Py_ssize_t i, j, n
+        Py_ssize_t i, j, k
 
-    n = x.shape[0]
-    i = 0
-    f = 0
-    while i < n:
+    f = 0.0
+    for i in range(n):
         g[i] = c[i]
-        j = 0
-        while j < n:
-            g[i] += Q[i,j] * x[j]
-            j += 1
+        k = i*n
+        for j in range(n): g[i] += Q[k+j] * x[j]
         f += .5 * (g[i] + c[i]) * x[i]
-        i += 1
-    return f, g
-
+    return f
 
 # x is current estimate
 # f = f(x) objective at current estimate

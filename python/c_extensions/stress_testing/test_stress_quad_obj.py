@@ -24,17 +24,18 @@ class TestStressQuadObj(unittest.TestCase):
             x_true = x_true / np.linalg.norm(x_true, 1)
             b = A.dot(x_true)
             Q = A.T.dot(A)
+            Q_flat = Q.flatten()
             c = -A.T.dot(b)
             c = c.flatten()
             g = np.zeros(n)
 
             def obj_c(x, g):
-                return quad_obj(x, Q, c, g)
+                return quad_obj(x, Q_flat, c, g)
 
             def obj_np(x, g):
                 np.copyto(g, Q.dot(x) + c)
                 f = .5 * x.T.dot(g + c)
-                return f, g
+                return f
             
             start_time = time.time()
             obj_c(x_true, g)

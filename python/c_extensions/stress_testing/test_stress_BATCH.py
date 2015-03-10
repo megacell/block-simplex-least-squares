@@ -38,6 +38,7 @@ class TestStressBatch(unittest.TestCase):
             x_true = x_true / np.linalg.norm(x_true, 1)
             b = A.dot(x_true)
             Q = A.T.dot(A)
+            Q_flat = Q.flatten()
             c = -A.T.dot(b)
             G = spdiag([-1.0]*n)
             h = matrix([1.]*n, (n,1))
@@ -60,16 +61,16 @@ class TestStressBatch(unittest.TestCase):
                 return line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q, c)
 
             def obj_c(x, g):
-                return quad_obj(x, Q, c, g)
+                return quad_obj(x, Q_flat, c, g)
 
             def obj_np(x, g):
                 np.copyto(g, Q.dot(x) + c)
                 f = .5 * x.T.dot(g + c)
-                return f, g
+                return f
 
             x_true = x_true.flatten()
             start_time = time.time()
-            sol = batch.solve(obj_np, proj, line_search, x0)
+            sol = batch.solve(obj_c, proj, line_search, x0)
             times_batch.append(time.time() - start_time)
             precision_batch.append(np.linalg.norm(sol['x']-x_true))
             iters_batch.append(sol['iterations'])

@@ -22,6 +22,7 @@ class TestBatch(unittest.TestCase):
     def test_batch(self):
         
         Q = 2 * np.array([[2, .5], [.5, 1]])
+        Q_flat = Q.flatten()
         c = np.array([1.0, 1.0])
         x_true = np.array([.25, .75])
 
@@ -32,7 +33,7 @@ class TestBatch(unittest.TestCase):
             return line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q, c)
 
         def obj(x, g):
-            return quad_obj(x, Q, c, g)
+            return quad_obj(x, Q_flat, c, g)
 
         x0 = np.array([.5, .5])
         f_min = 1.875
@@ -66,6 +67,7 @@ class TestBatch(unittest.TestCase):
             # assert almost_equal(sol['x'], x_true, 1e-6)
 
             Q = np.array(Q)
+            Q_flat = Q.flatten()
             c = np.array(c).flatten()
             x0 = np.ones(n) / n
 
@@ -76,7 +78,8 @@ class TestBatch(unittest.TestCase):
                 return line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q, c)
 
             def obj(x, g):
-                return quad_obj(x, Q, c, g)
+                return quad_obj(x, Q_flat, c, g)
+                
             x_true = x_true.flatten()
             sol = batch.solve(obj, proj, line_search, x0, prog_tol=1e-14)
             assert almost_equal(sol['x'], x_true, 1e-5)

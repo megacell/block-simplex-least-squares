@@ -28,7 +28,7 @@ def solve(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
     x_new = np.zeros(n)
     f_old = np.inf
     i = 1
-    f, g = obj(x, g) # should update content of g
+    f = obj(x, g) # should update content of g
     while True:
         # stopping criteria
         start_time = time.time()
@@ -48,7 +48,7 @@ def solve(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
         proj(x_new)
         t_proj += time.time() - start_time
         start_time = time.time()
-        f_new, g_new = obj(x_new, g_new) # should update content of g_new
+        f_new = obj(x_new, g_new) # should update content of g_new
         t_obj += time.time() - start_time
         # do line search between x and x_new, should update x_new, g_new
         start_time = time.time()

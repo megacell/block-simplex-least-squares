@@ -21,10 +21,11 @@ class TestCythonExtensions(unittest.TestCase):
         for n in range(2,10):
             x = 2*np.random.rand(n) - 1
             Q = 2*np.random.rand(n,n) - 1
+            Q_flat = Q.flatten()
             c = 2*np.random.rand(n) - 1
             g = np.zeros(n)
             #f, g = quad_obj(x, Q, c, g)
-            f = quad_obj(x, Q, c, g)[0]
+            f = quad_obj(x, Q_flat, c, g)
             x, Q, c = matrix(x), matrix(Q), matrix(c)
             f2 = (.5 * x.T * Q * x + c.T * x)[0]
             g2 = Q * x + c

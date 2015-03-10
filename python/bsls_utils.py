@@ -25,7 +25,6 @@ L_BFGS = 'L-BFGS'
 SPG = 'SPG'
 ADMM = 'ADMM'
 
-EPS = 1e-8
 
 def deprecated(func):
     '''This is a decorator which can be used to mark functions
@@ -80,8 +79,8 @@ def all_equal(x,y):
     return np.all(np.equal(x,y))
 
 # Check if all entries approximately equal
-def almost_equal(x,y):
-    return np.linalg.norm(x-y) < EPS
+def almost_equal(x,y,tol=1e-8):
+    return np.linalg.norm(x-y) < tol
 
 # Check if ndarray consists of all ones
 def is_ones(x):

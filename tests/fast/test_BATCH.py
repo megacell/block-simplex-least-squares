@@ -80,7 +80,6 @@ class TestBatch(unittest.TestCase):
             x_true = x_true.flatten()
             sol = batch.solve(obj, proj, line_search, x0, prog_tol=1e-14)
             assert almost_equal(sol['x'], x_true, 1e-5)
-            #assert almost_equal(sol['x'], x_true, 1e-6)
 
 
 if __name__ == '__main__':

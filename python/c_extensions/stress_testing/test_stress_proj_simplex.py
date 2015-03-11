@@ -7,7 +7,7 @@ import sys
 sys.path.append('../../../')
 
 from python.c_extensions.c_extensions import proj_simplex_c, proj_multi_simplex_c
-from python.c_extensions.python_implementation import proj_simplex, proj_multi_simplex
+from python.algorithm_utils import proj_simplex, proj_multi_simplex
 
 import numpy as np
 

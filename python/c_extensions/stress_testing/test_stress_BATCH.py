@@ -7,7 +7,7 @@ sys.path.append('../../../')
 from python.c_extensions.c_extensions import (proj_simplex_c,
                                        quad_obj_c, 
                                        line_search_quad_obj_c)
-from python.c_extensions.python_implementation import quad_obj_np, line_search_quad_obj_np
+from python.algorithm_utils import quad_obj_np, line_search_quad_obj_np
 import python.BATCH as batch
 from python.bsls_utils import almost_equal
 
@@ -58,7 +58,7 @@ class TestStressBatch(unittest.TestCase):
             def proj(x):
                 proj_simplex_c(x, 0, n)
 
-            def line_search_c(x, f, g, x_new, f_new, g_new):
+            def line_search_c(x, f, g, x_new, f_new, g_new, i):
                 return line_search_quad_obj_c(x, f, g, x_new, f_new, g_new, Q_flat, c)
 
 
@@ -68,7 +68,7 @@ class TestStressBatch(unittest.TestCase):
             def obj_np(x, g):
                 return quad_obj_np(x, Q, c, g)
 
-            def line_search_np(x, f, g, x_new, f_new, g_new):
+            def line_search_np(x, f, g, x_new, f_new, g_new, i):
                 return line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c)
 
 
@@ -79,8 +79,9 @@ class TestStressBatch(unittest.TestCase):
             precision_batch.append(np.linalg.norm(sol['x']-x_true))
             iters_batch.append(sol['iterations'])
             if i == 2:
-                print sol['times']
-                print sum(sol['times'])
+                print 't_proj:', sol['t_proj']
+                print 't_obj:', sol['t_obj']
+                print 't_line:', sol['t_line']
             #assert almost_equal(sol['x'], x_true, 1e-5)
         print 'CVXOPT'
         print 'times', times_cvxopt

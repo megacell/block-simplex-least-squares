@@ -29,7 +29,7 @@ class TestBatch(unittest.TestCase):
         def proj(x):
             proj_simplex_c(x, 0, 2)
 
-        def line_search(x, f, g, x_new, f_new, g_new):
+        def line_search(x, f, g, x_new, f_new, g_new, i):
             return line_search_quad_obj_c(x, f, g, x_new, f_new, g_new, Q_flat, c)
 
         def obj(x, g):
@@ -74,7 +74,7 @@ class TestBatch(unittest.TestCase):
             def proj(x):
                 proj_simplex_c(x, 0, n)
 
-            def line_search(x, f, g, x_new, f_new, g_new):
+            def line_search(x, f, g, x_new, f_new, g_new, i):
                 return line_search_quad_obj_c(x, f, g, x_new, f_new, g_new, Q_flat, c)
 
             def obj(x, g):

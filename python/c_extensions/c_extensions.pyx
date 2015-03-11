@@ -408,3 +408,35 @@ def z2x_c(np.ndarray[np.double_t,ndim=1] x,
         k += 1
     return x
 
+
+def line_search_quad_obj_2(np.ndarray[np.double_t,ndim=1] x,
+                         np.double_t f,
+                         np.ndarray[np.double_t,ndim=1] g,
+                         np.ndarray[np.double_t,ndim=1] x_new,
+                         np.double_t f_new,
+                         np.ndarray[np.double_t,ndim=1] g_new,
+                         np.ndarray[np.double_t,ndim=2] Q,
+                         np.ndarray[np.double_t,ndim=1] c):
+    cdef:
+        np.double_t t = 1., suffDec = 1e-4, upper_line, progTol = 1e-8, max
+        Py_ssize_t i = 0, j, k
+
+    upper_line = f + suffDec * g.dot(x_new - x)
+
+    while f_new > upper_line:
+        t *= .5
+        # Check whether step has become too small
+        if np.linalg.norm(x_new - x, np.inf)  < progTol:
+            t = 0.0
+            f_new = f
+            np.copyto(g_new, g)
+            np.copyto(x_new, x)
+            break
+        
+        # update
+        np.copyto(x_new, (1.0-t)*x + t*x_new)
+        np.copyto(g_new, Q.dot(x_new) + c)
+        f_new = .5 * x_new.T.dot(g_new + c)
+        upper_line = f + suffDec * g.dot(x_new - x)
+
+    return f_new, t

@@ -5,8 +5,9 @@ from cvxopt import matrix, spdiag, spmatrix, solvers
 import sys
 sys.path.append('../../../')
 from python.c_extensions.c_extensions import (proj_simplex_c,
-                                       quad_obj, 
-                                       line_search_quad_obj)
+                                       quad_obj_c, 
+                                       line_search_quad_obj_c)
+from python.c_extensions.python_implementation import quad_obj_np, line_search_quad_obj_np
 import python.BATCH as batch
 from python.bsls_utils import almost_equal
 
@@ -31,7 +32,7 @@ class TestStressBatch(unittest.TestCase):
         iters_batch = []
         precision_cvxopt = []
         precision_batch = []
-        for n in [10, 100, 300]: # dimension of features
+        for i,n in enumerate([10, 100, 500]): # dimension of features
             m = 1.5*n # number of measurements
             A = np.random.randn(m, n)
             x_true = abs(np.random.randn(n,1))
@@ -57,24 +58,27 @@ class TestStressBatch(unittest.TestCase):
             def proj(x):
                 proj_simplex_c(x, 0, n)
 
-            def line_search(x, f, g, x_new, f_new, g_new):
-                return line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q_flat, c)
+            def line_search_c(x, f, g, x_new, f_new, g_new):
+                return line_search_quad_obj_c(x, f, g, x_new, f_new, g_new, Q_flat, c)
+
 
             def obj_c(x, g):
-                return quad_obj(x, Q_flat, c, g)
+                return quad_obj_c(x, Q_flat, c, g)
 
             def obj_np(x, g):
-                np.copyto(g, Q.dot(x) + c)
-                f = .5 * x.T.dot(g + c)
-                return f
+                return quad_obj_np(x, Q, c, g)
+
+            def line_search_np(x, f, g, x_new, f_new, g_new):
+                return line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c)
+
 
             x_true = x_true.flatten()
             start_time = time.time()
-            sol = batch.solve(obj_c, proj, line_search, x0)
+            sol = batch.solve(obj_np, proj, line_search_np, x0)
             times_batch.append(time.time() - start_time)
             precision_batch.append(np.linalg.norm(sol['x']-x_true))
             iters_batch.append(sol['iterations'])
-            if n == 300:
+            if i == 2:
                 print sol['times']
                 print sum(sol['times'])
             #assert almost_equal(sol['x'], x_true, 1e-5)
@@ -90,3 +94,4 @@ class TestStressBatch(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+    

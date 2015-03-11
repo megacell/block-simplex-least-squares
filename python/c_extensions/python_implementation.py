@@ -68,3 +68,34 @@ def proj_multi_simplex(y, blocks):
     assert blocks[0]>=0 and blocks[-1]<len(y), 'indices out of range'
     for start, end in zip(blocks[:-1], blocks[1:]): proj_simplex(y, start, end)
     proj_simplex(y, blocks[-1], len(y))
+
+
+def quad_obj_np(x, Q, c, g):
+    """Receives numpy arrays
+    """
+    np.copyto(g, Q.dot(x) + c)
+    f = .5 * x.T.dot(g + c)
+    return f
+
+
+def line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c):
+    t = 1.0
+    suffDec = 1e-4
+    progTol = 1e-8
+    upper_line = f + suffDec * g.dot(x_new - x)
+    while f_new > upper_line:
+        t *= .5
+        # Check whether step has become too small
+        if np.linalg.norm(x_new - x, np.inf)  < progTol:
+            t = 0.0
+            f_new = f
+            np.copyto(g_new, g)
+            np.copyto(x_new, x)
+            break
+        # update
+        np.copyto(x_new, (1.0-t)*x + t*x_new)
+        np.copyto(g_new, Q.dot(x_new) + c)
+        f_new = .5 * x_new.T.dot(g_new + c)
+        upper_line = f + suffDec * g.dot(x_new - x)
+
+    return f_new

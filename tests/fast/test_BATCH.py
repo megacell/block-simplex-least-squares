@@ -4,8 +4,8 @@ from cvxopt import matrix, spdiag, spmatrix, solvers
 import sys
 sys.path.append('../../')
 from python.c_extensions.c_extensions import (proj_simplex_c,
-                                       quad_obj, 
-                                       line_search_quad_obj)
+                                       quad_obj_c, 
+                                       line_search_quad_obj_c)
 import python.BATCH as batch
 from python.bsls_utils import almost_equal
 
@@ -30,10 +30,10 @@ class TestBatch(unittest.TestCase):
             proj_simplex_c(x, 0, 2)
 
         def line_search(x, f, g, x_new, f_new, g_new):
-            return line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q_flat, c)
+            return line_search_quad_obj_c(x, f, g, x_new, f_new, g_new, Q_flat, c)
 
         def obj(x, g):
-            return quad_obj(x, Q_flat, c, g)
+            return quad_obj_c(x, Q_flat, c, g)
 
         x0 = np.array([.5, .5])
         f_min = 1.875
@@ -75,10 +75,10 @@ class TestBatch(unittest.TestCase):
                 proj_simplex_c(x, 0, n)
 
             def line_search(x, f, g, x_new, f_new, g_new):
-                return line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q_flat, c)
+                return line_search_quad_obj_c(x, f, g, x_new, f_new, g_new, Q_flat, c)
 
             def obj(x, g):
-                return quad_obj(x, Q_flat, c, g)
+                return quad_obj_c(x, Q_flat, c, g)
                 
             x_true = x_true.flatten()
             sol = batch.solve(obj, proj, line_search, x0, prog_tol=1e-14)

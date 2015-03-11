@@ -6,9 +6,7 @@ import sys
 sys.path.append('../../')
 from python.c_extensions.python_implementation import proj_PAV
 from python.c_extensions.c_extensions import (isotonic_regression_c, 
-                                              isotonic_regression_multi_c,
-                                              isotonic_regression_c_2, 
-                                              isotonic_regression_multi_c_2)
+                                              isotonic_regression_multi_c)
 
 import numpy as np
 
@@ -41,18 +39,8 @@ class TestIsotonicRegression(unittest.TestCase):
             y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
             ir = IsotonicRegression()
             truth = ir.fit_transform(x, y)
-            self.assertTrue(np.linalg.norm(isotonic_regression_c(y,0,n) - truth) < 1e-8)
-    
-
-    def test_isotonic_regression_c_2(self):
-        n = 10
-        x = np.arange(n)
-        rs = check_random_state(0)
-        for i in range(10):
-            y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
-            ir = IsotonicRegression()
-            truth = ir.fit_transform(x, y)
-            self.assertTrue(np.linalg.norm(isotonic_regression_c_2(y,0,n) - truth) < 1e-8)
+            isotonic_regression_c(y,0,n)
+            self.assertTrue(np.linalg.norm(y - truth) < 1e-8)
 
 
     def test_proj_PAV(self):
@@ -74,17 +62,6 @@ class TestIsotonicRegression(unittest.TestCase):
             blocks = np.sort(np.random.choice(n, 3, replace=False))
             truth = self.sklearn_isotonic_regression_multi(y, blocks)
             isotonic_regression_multi_c(y, blocks)
-            assert np.linalg.norm(y-truth) < 1e-8
-
-
-    def test_isotonic_regression_multi_c_2(self):
-        n = 10
-        rs = check_random_state(0)
-        for i in range(10):
-            y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
-            blocks = np.sort(np.random.choice(n, 3, replace=False))
-            truth = self.sklearn_isotonic_regression_multi(y, blocks)
-            isotonic_regression_multi_c_2(y, blocks)
             assert np.linalg.norm(y-truth) < 1e-8
 
 

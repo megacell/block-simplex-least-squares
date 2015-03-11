@@ -7,9 +7,7 @@ import sys
 sys.path.append('../../../')
 from python.c_extensions.python_implementation import proj_PAV
 from python.c_extensions.c_extensions import (isotonic_regression_c,
-                                              isotonic_regression_multi_c,
-                                              isotonic_regression_c_2,
-                                              isotonic_regression_multi_c_2)
+                                              isotonic_regression_multi_c)
 import numpy as np
 from sklearn.isotonic import IsotonicRegression
 from sklearn.utils import check_random_state
@@ -75,34 +73,6 @@ class TestStressIsotonicRegression(unittest.TestCase):
             isotonic_regression_multi_c(y, blocks)
             times.append(time.time() - start_time)
         print 'test isotonic_regression_multi_c'
-        print times
-
-
-    def test_isotonic_regression_c_2(self):
-        self.setUp()
-        times = []
-        rs = check_random_state(0)
-        for n in [int(1e3), int(1e4), int(1e5), int(1e6)]:
-            y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
-            start_time = time.time()
-            isotonic_regression_c_2(y, 0, n)
-            times.append(time.time() - start_time)
-        print 'test isotonic_regression_c_2'
-        print times
-
-
-    def test_isotonic_regression_multi_c_2(self):
-        self.setUp()
-        n = int(1e6)
-        times = []
-        rs = check_random_state(0)
-        for num_blocks in [int(1e1), int(1e2), int(1e3), int(1e4)]:
-            y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
-            blocks = np.sort(np.random.choice(n, num_blocks, replace=False))
-            start_time = time.time()
-            isotonic_regression_multi_c_2(y, blocks)
-            times.append(time.time() - start_time)
-        print 'test isotonic_regression_multi_c_2'
         print times
 
 

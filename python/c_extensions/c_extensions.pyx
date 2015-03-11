@@ -10,6 +10,7 @@ Compile with python setup.py build_ext --inplace
 
 cimport numpy as np
 import numpy as np
+import ctypes
 
 # PAV algorithm for isotonic regression adapted from:
 # http://tullo.ch/articles/speeding-up-isotonic-regression/
@@ -204,9 +205,10 @@ def isotonic_regression_multi_c_2(np.ndarray[double,ndim=1] y, blocks):
     return y
 
 
-cdef extern from "arrays.h":
+cdef extern from "proj_simplex.h":
     void proj_simplex(double *y, int start, int end)
-    void proj_multi_simplex_hack(double *y, double *blocks, int numblocks, int n)
+    void proj_multi_simplex(double *y, int *blocks, int numblocks, int n)
+
 
 def proj_simplex_c(np.ndarray[np.double_t,ndim=1] y, start, end):
     n = y.shape[0]
@@ -217,16 +219,15 @@ def proj_simplex_c(np.ndarray[np.double_t,ndim=1] y, start, end):
     proj_simplex(&y_c[0], start, end)
 
 
-def proj_multi_simplex_c(np.ndarray[np.double_t,ndim=1] y, blocks):
-    n = y.shape[0]
-    assert False not in ((blocks[1:]-blocks[:-1])>0), 'block indices not increasing'
-    assert blocks[0]>=0 and blocks[-1]<n, 'indices out of range'
-    blocks = blocks.astype(np.double)
+def proj_multi_simplex_c(np.ndarray[np.double_t,ndim=1] y, 
+                     np.ndarray[np.int_t,ndim=1] blocks):
+    assert False not in ((blocks[1:]-blocks[:-1])>0)
+    assert blocks[0]>=0 and blocks[-1]<y.shape[0]
     cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
-    cdef np.ndarray[np.double_t, ndim=1, mode="c"] b_c
+    cdef np.ndarray[int, ndim=1, mode="c"] b_c
     y_c = np.ascontiguousarray(y, dtype=np.double)
-    b_c = np.ascontiguousarray(blocks, dtype=np.double)
-    proj_multi_simplex_hack(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])
+    b_c = np.ascontiguousarray(blocks, dtype=ctypes.c_int)
+    proj_multi_simplex(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])
 
 
 def quad_obj(np.ndarray[np.double_t,ndim=1] x,
@@ -408,35 +409,3 @@ def z2x_c(np.ndarray[np.double_t,ndim=1] x,
         k += 1
     return x
 
-
-def line_search_quad_obj_2(np.ndarray[np.double_t,ndim=1] x,
-                         np.double_t f,
-                         np.ndarray[np.double_t,ndim=1] g,
-                         np.ndarray[np.double_t,ndim=1] x_new,
-                         np.double_t f_new,
-                         np.ndarray[np.double_t,ndim=1] g_new,
-                         np.ndarray[np.double_t,ndim=2] Q,
-                         np.ndarray[np.double_t,ndim=1] c):
-    cdef:
-        np.double_t t = 1., suffDec = 1e-4, upper_line, progTol = 1e-8, max
-        Py_ssize_t i = 0, j, k
-
-    upper_line = f + suffDec * g.dot(x_new - x)
-
-    while f_new > upper_line:
-        t *= .5
-        # Check whether step has become too small
-        if np.linalg.norm(x_new - x, np.inf)  < progTol:
-            t = 0.0
-            f_new = f
-            np.copyto(g_new, g)
-            np.copyto(x_new, x)
-            break
-        
-        # update
-        np.copyto(x_new, (1.0-t)*x + t*x_new)
-        np.copyto(g_new, Q.dot(x_new) + c)
-        f_new = .5 * x_new.T.dot(g_new + c)
-        upper_line = f + suffDec * g.dot(x_new - x)
-
-    return f_new, t

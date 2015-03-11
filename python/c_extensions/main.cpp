@@ -6,7 +6,7 @@
  */
 
 #include <iostream>
-#include"arrays.h"
+#include"proj_simplex.h"
 
 
 int main( int argc, char ** argv ) {

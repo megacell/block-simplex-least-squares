@@ -6,8 +6,8 @@ import sys
 sys.path.append('../../../')
 from python.c_extensions.c_extensions import (proj_simplex_c,
                                        quad_obj, 
-                                       line_search_quad_obj,
-                                       line_search_quad_obj_2)
+                                       line_search_quad_obj)
+from python.c_extensions.python_implementation import quad_obj_np, line_search_quad_obj_np
 import python.BATCH as batch
 from python.bsls_utils import almost_equal
 
@@ -59,36 +59,17 @@ class TestStressBatch(unittest.TestCase):
                 proj_simplex_c(x, 0, n)
 
             def line_search(x, f, g, x_new, f_new, g_new):
-                return line_search_quad_obj_2(x, f, g, x_new, f_new, g_new, Q, c)
+                return line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q_flat, c)
 
-            def obj_c(x, g):
+
+            def obj(x, g):
                 return quad_obj(x, Q_flat, c, g)
 
             def obj_np(x, g):
-                np.copyto(g, Q.dot(x) + c)
-                f = .5 * x.T.dot(g + c)
-                return f
+                return quad_obj_np(x, Q, c, g)
 
             def line_search_np(x, f, g, x_new, f_new, g_new):
-                t = 0.0
-                suffDec = 1e-4
-                progTol = 1e-8
-                upper_line = f + suffDec * g.dot(x_new - x)
-                while f_new > upper_line:
-                    t *= .5
-                    # Check whether step has become too small
-                    if np.linalg.norm(x_new - x, np.inf)  < progTol:
-                        f_new = f
-                        np.copyto(g_new, g)
-                        np.copyto(x_new, x)
-                        break
-                    # update
-                    np.copyto(x_new, (1.0-t)*x + t*x_new)
-                    np.copyto(g_new, Q.dot(x_new) + c)
-                    f_new = .5 * x_new.T.dot(g_new + c)
-                    upper_line = f + suffDec * g.dot(x_new - x)
-
-                return f_new, t
+                return line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c)
 
 
             x_true = x_true.flatten()

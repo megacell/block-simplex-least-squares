@@ -63,31 +63,27 @@ def isotonic_regression_multi_c(np.ndarray[np.double_t,ndim=1] y,
     isotonic_regression_multi(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])
 
 
-def quad_obj(np.ndarray[np.double_t,ndim=1] x,
+cdef extern from "quadratic_objective.h":
+    double quad_obj(double *x, double *Q, double *c, double*g, int n)
+    double line_search(double *x, double f, double *g, 
+                       double *x_new, double f_new, double *g_new,
+                       double *Q, double *c, int n)
+
+
+def quad_obj_c(np.ndarray[np.double_t,ndim=1] x,
              np.ndarray[np.double_t,ndim=1] Q,
              np.ndarray[np.double_t,ndim=1] c,
              np.ndarray[np.double_t,ndim=1] g):
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] x_c
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] Q_c
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] c_c
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] g_c
+    x_c = np.ascontiguousarray(x, dtype=np.double)
+    Q_c = np.ascontiguousarray(Q, dtype=np.double)
+    c_c = np.ascontiguousarray(c, dtype=np.double)
+    g_c = np.ascontiguousarray(g, dtype=np.double)
+    return quad_obj(&x_c[0], &Q_c[0], &c_c[0], &g_c[0], x.shape[0])
 
-    return quad_obj_c(<np.double_t*> x.data, 
-                      <np.double_t*> Q.data, 
-                      <np.double_t*> c.data, 
-                      <np.double_t*> g.data, 
-                      x.shape[0])
-
-
-cdef quad_obj_c(np.double_t* x, np.double_t* Q, 
-                np.double_t* c, np.double_t* g, Py_ssize_t n):
-    cdef:
-        np.double_t f
-        Py_ssize_t i, j, k
-
-    f = 0.0
-    for i in range(n):
-        g[i] = c[i]
-        k = i*n
-        for j in range(n): g[i] += Q[k+j] * x[j]
-        f += .5 * (g[i] + c[i]) * x[i]
-    return f
 
 # x is current estimate
 # f = f(x) objective at current estimate
@@ -97,7 +93,7 @@ cdef quad_obj_c(np.double_t* x, np.double_t* Q,
 # performs backtracking line search between x and x_new
 # see: http://stanford.edu/~boyd/cvxbook/, section 9.2
 
-def line_search_quad_obj(np.ndarray[np.double_t,ndim=1] x,
+def line_search_quad_obj_c(np.ndarray[np.double_t,ndim=1] x,
                          np.double_t f,
                          np.ndarray[np.double_t,ndim=1] g,
                          np.ndarray[np.double_t,ndim=1] x_new,
@@ -105,86 +101,20 @@ def line_search_quad_obj(np.ndarray[np.double_t,ndim=1] x,
                          np.ndarray[np.double_t,ndim=1] g_new,
                          np.ndarray[np.double_t,ndim=1] Q,
                          np.ndarray[np.double_t,ndim=1] c):
-
-    return line_search_quad_obj_c(<np.double_t*> x.data, 
-                                  f,
-                                  <np.double_t*> g.data,
-                                  <np.double_t*> x_new.data, 
-                                  f_new,
-                                  <np.double_t*> g_new.data,
-                                  <np.double_t*> Q.data,
-                                  <np.double_t*> c.data,
-                                  x.shape[0])
-
-
-cdef line_search_quad_obj_c(np.double_t* x, 
-                            np.double_t f,
-                            np.double_t* g,
-                            np.double_t* x_new, 
-                            np.double_t f_new,
-                            np.double_t* g_new,
-                            np.double_t* Q,
-                            np.double_t* c,
-                            Py_ssize_t n):
-    cdef:
-        np.double_t t = 1., suffDec = 1e-4, upper_line = f, progTol = 1e-8, max
-        Py_ssize_t i = 0, j, k
-    
-    # compute initial upper_line
-    while i < n:
-        upper_line += suffDec * g[i] * (x_new[i] - x[i])
-        i += 1
-
-    while f_new > upper_line:
-        t *= .5
-
-        # compute norm_inf of x - x_new
-        i = 0
-        max = 0.0
-        while i < n:
-            if x_new[i] - x[i] > max:
-                max = x_new[i] - x[i]
-            if x[i] - x_new[i] > max:
-                max = x[i] - x_new[i]
-            i += 1
-
-        # Check whether step has become too small
-        if t * max < progTol:
-            t = 0.
-            i = 0
-            while i < n:
-                x_new[i] = x[i]
-                g_new[i] = g[i]
-                i += 1
-            f_new = f
-            break
-        
-        # Compute new point
-        i = 0
-        while i < n:
-            x_new[i] = x[i] + t * (x_new[i] - x[i])
-            i += 1
-        
-        # compute objective and gradient at x_new
-        i = 0
-        f_new = 0
-        while i < n:
-            g_new[i] = c[i]
-            j = 0
-            k = i*n
-            while j < n:
-                g_new[i] += Q[k+j] * x_new[j]
-                j += 1
-            f_new += .5 * (g_new[i] + c[i]) * x_new[i]
-            i += 1
-
-        # compute upper_line at x_new
-        i = 0
-        upper_line = f
-        while i < n:
-            upper_line += suffDec * g[i] * (x_new[i] - x[i])
-            i += 1
-    return f_new, t
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] x_c
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] g_c
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] x_new_c
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] g_new_c
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] Q_c
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] c_c
+    x_c = np.ascontiguousarray(x, dtype=np.double)
+    g_c = np.ascontiguousarray(g, dtype=np.double)
+    x_new_c = np.ascontiguousarray(x_new, dtype=np.double)
+    g_new_c = np.ascontiguousarray(g_new, dtype=np.double)
+    Q_c = np.ascontiguousarray(Q, dtype=np.double)
+    c_c = np.ascontiguousarray(c, dtype=np.double)
+    return line_search(&x_c[0], f, &g_c[0], &x_new_c[0], f_new, &g_new_c[0],
+                       &Q_c[0], &c_c[0], x.shape[0])
 
 
 def x2z_c(np.ndarray[np.double_t,ndim=1] x,

@@ -5,8 +5,8 @@ from cvxopt import matrix, spdiag, spmatrix, solvers
 import sys
 sys.path.append('../../../')
 from python.c_extensions.c_extensions import (proj_simplex_c,
-                                       quad_obj, 
-                                       line_search_quad_obj)
+                                       quad_obj_c, 
+                                       line_search_quad_obj_c)
 from python.c_extensions.python_implementation import quad_obj_np, line_search_quad_obj_np
 import python.BATCH as batch
 from python.bsls_utils import almost_equal
@@ -58,12 +58,12 @@ class TestStressBatch(unittest.TestCase):
             def proj(x):
                 proj_simplex_c(x, 0, n)
 
-            def line_search(x, f, g, x_new, f_new, g_new):
-                return line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q_flat, c)
+            def line_search_c(x, f, g, x_new, f_new, g_new):
+                return line_search_quad_obj_c(x, f, g, x_new, f_new, g_new, Q_flat, c)
 
 
-            def obj(x, g):
-                return quad_obj(x, Q_flat, c, g)
+            def obj_c(x, g):
+                return quad_obj_c(x, Q_flat, c, g)
 
             def obj_np(x, g):
                 return quad_obj_np(x, Q, c, g)

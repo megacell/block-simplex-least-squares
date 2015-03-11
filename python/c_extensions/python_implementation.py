@@ -98,4 +98,4 @@ def line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c):
         f_new = .5 * x_new.T.dot(g_new + c)
         upper_line = f + suffDec * g.dot(x_new - x)
 
-    return f_new, t
+    return f_new

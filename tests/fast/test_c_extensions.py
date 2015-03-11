@@ -2,7 +2,7 @@ import unittest
 import sys
 
 sys.path.append('../../')
-from python.c_extensions.c_extensions import quad_obj, line_search_quad_obj, x2z_c, z2x_c
+from python.c_extensions.c_extensions import quad_obj_c, line_search_quad_obj_c, x2z_c, z2x_c
 from python.bsls_utils import almost_equal
 from cvxopt import matrix
 
@@ -23,23 +23,22 @@ class TestCythonExtensions(unittest.TestCase):
             Q = 2*np.random.rand(n,n) - 1
             Q_flat = Q.flatten()
             c = 2*np.random.rand(n) - 1
+            x2, Q2, c2 = matrix(x), matrix(Q), matrix(c)
             g = np.zeros(n)
-            #f, g = quad_obj(x, Q, c, g)
-            f = quad_obj(x, Q_flat, c, g)
-            x, Q, c = matrix(x), matrix(Q), matrix(c)
-            f2 = (.5 * x.T * Q * x + c.T * x)[0]
-            g2 = Q * x + c
+            f = quad_obj_c(x, Q_flat, c, g)
+            f2 = (.5 * x2.T * Q2 * x2 + c2.T * x2)[0]
+            g2 = Q2 * x2 + c2
             assert abs(f2-f) < 1e-6
             for i in range(n): assert abs(g[i]-g2[i]) < 1e-6
 
 
     def helper(self, x, f, g, x_new, f_new, g_new, x_true, f_true, g_true, t_true, Q, c):
         # x_new, f_new, g_new, t = line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q, c)
-        f_new, t = line_search_quad_obj(x, f, g, x_new, f_new, g_new, Q, c)
+        f_new = line_search_quad_obj_c(x, f, g, x_new, f_new, g_new, Q, c)
         assert np.linalg.norm(x_new - x_true) < 1e-8
         assert abs(f_new - f_true) < 1e-8
-        assert np.linalg.norm(g_new - g_true) < 1e-8
-        assert abs(t - t_true) < 1e-8
+        assert np.linalg.norm(g_new - g_true) < 1e-6
+        #assert abs(t - t_true) < 1e-8
 
 
     def test_line_search(self):

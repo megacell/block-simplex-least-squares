@@ -3,7 +3,7 @@ import time
 import numpy as np
 import sys
 sys.path.append('../../../')
-from python.c_extensions.c_extensions import quad_obj
+from python.c_extensions.c_extensions import quad_obj_c
 
 __author__ = 'jeromethai'
 
@@ -14,10 +14,10 @@ class TestStressQuadObj(unittest.TestCase):
         np.random.seed(seed)
     
 
-    def test_quad_obj(self):
+    def test_quad_obj_c(self):
         times_c = []
         times_np = []
-        for n in [100, 1000]:
+        for n in [100, 1000, 10000]:
             m = 1.5*n # number of measurements
             A = np.random.randn(m, n)
             x_true = abs(np.random.randn(n))
@@ -30,7 +30,7 @@ class TestStressQuadObj(unittest.TestCase):
             g = np.zeros(n)
 
             def obj_c(x, g):
-                return quad_obj(x, Q_flat, c, g)
+                return quad_obj_c(x, Q_flat, c, g)
 
             def obj_np(x, g):
                 np.copyto(g, Q.dot(x) + c)

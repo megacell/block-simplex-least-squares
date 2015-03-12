@@ -4,6 +4,8 @@ import numpy as np
 import sys
 sys.path.append('../../')
 import python.mirror_descent as md
+from python.algorithm_utils import quad_obj_np, 
+
 
 class TestMirrorDescent(unittest.TestCase):
 
@@ -52,7 +54,21 @@ class TestMirrorDescent(unittest.TestCase):
                 two_block_soln)
 
 
-    #def test_mirror
+    def test_mirror(self):
+        Q = 2 * np.array([[2, .5], [.5, 1]])
+        c = np.array([1.0, 1.0])
+        x_true = np.array([.25, .75])
+
+    def obj(x, g):
+        return quad_obj_np(x, Q, c, g)
+
+
+     x0 = np.array([.5, .5])
+     f_min  = 1.875
+
+     sol = md.solve(obj, block_starts, x0)
+     print sol['x']
+
 
 
 if __name__=='__main__':

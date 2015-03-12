@@ -1,0 +1,6 @@
+TASKS
+
+[Je.] improve isotonic regression, x2z, z2x
+[Je.] line-search (2 options: analytical formula, include numpy array multiply)
+[Ch.] add CPLEX in c_extensions/stress_testing/test_stress_BATH.py
+[Ch.] 

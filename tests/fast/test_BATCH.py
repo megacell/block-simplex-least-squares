@@ -40,10 +40,10 @@ class TestBatch(unittest.TestCase):
 
         sol = batch.solve(obj, proj, line_search, x0)
         assert almost_equal(sol['x'], x_true)
-        assert sol['stop'] == 'stop with f_old-f < prog_tol'
+        assert sol['stop'][-10:] == '< prog_tol'
         sol = batch.solve(obj, proj, line_search, x0, f_min)
         assert almost_equal(sol['x'], x_true)
-        assert sol['stop'] == 'stop with f-f_min < opt_tol'
+        assert sol['stop'][-10:] == ' < opt_tol'
 
 
     def test_batch_2(self):
@@ -59,13 +59,6 @@ class TestBatch(unittest.TestCase):
             b = A*matrix(x_true)
             Q = A.T * A
             c = -A.T*b
-            # G = spdiag([-1.0]*n)
-            # h = matrix([1.]*n, (n,1))
-            # U = matrix([1.]*n, (1,n))
-            # f = matrix(1.0)
-            # sol = solvers.qp(Q, c, G, h, U, f)
-            # assert almost_equal(sol['x'], x_true, 1e-6)
-
             Q = np.array(Q)
             Q_flat = Q.flatten()
             c = np.array(c).flatten()

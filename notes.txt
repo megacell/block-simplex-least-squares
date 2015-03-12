@@ -4,5 +4,4 @@ TASKS
 [Je.] line-search (2 options: analytical formula, include numpy array multiply)
 [Je.] Implement l-BFGS, stochastic gradient descent, ADMM
 [Ch.] add CPLEX in python/c_extensions/stress_testing/test_stress_BATH.py
-[Ch.] Add CPLEX installation for OSX and Linux to README
-[Ch.] Add obj_sparse_np method to python/algorithm_utils.py, sparse version of obj_np
+[Ch.] Add obj_sparse_np method to python/algorithm_utils.py, sparse version of obj_np (check spicy.sparse doc)

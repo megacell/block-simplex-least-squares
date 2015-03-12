@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg
+from algorithm_utils import stopping
+
 
 def least_squares(A, b, blocks, iters=1000, tolerance=1e-9):
     
@@ -52,8 +54,8 @@ def least_squares(A, b, blocks, iters=1000, tolerance=1e-9):
 
 
 def solve(obj, block_starts, x0, f_min=None, opt_tol=1e-6, 
-          max_iter=1000, prog_tol=1e-9):
-    """
+          max_iter=5000, prog_tol=1e-9):
+    """mirror descent algorithm
     """
     n = x0.shape[0]
     x = x0
@@ -68,9 +70,12 @@ def solve(obj, block_starts, x0, f_min=None, opt_tol=1e-6,
         flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)
         if flag is True: break
         # update x
-        x = x * np.exp(-g)
+        np.copyto(x_new, x * np.exp(-g))
+        #print x
+        #print block_starts
+        #print block_ends
         for start, end in zip(block_starts, block_ends):
-            np.copyto(x[start:end], x[start:end] / np.sum(x[start:end]))
+            np.copyto(x_new[start:end], x_new[start:end] / np.sum(x_new[start:end]))
         f_new = obj(x_new, g_new)
         # take step
         f_old = f

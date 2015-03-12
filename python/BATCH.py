@@ -1,21 +1,6 @@
 import numpy as np
 import time
-
-
-def stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min=None):
-    flag = False
-    stop = 'continue'
-    if i == max_iter:
-        stop = 'max_iter';
-        flag = True
-    if f_min is not None and f-f_min < opt_tol:
-        stop = 'f-f_min = {} < opt_tol'.format(f-f_min)
-        flag = True
-    if abs(f_old-f) < prog_tol:
-        stop = '|f_old-f| = {} < prog_tol'.format(abs(f_old-f))
-        flag = True
-    return flag, stop
-
+from algorithm_utils import stopping
 
 
 def solve(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6, 

@@ -106,9 +106,33 @@ def line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c):
 def line_search_exact_quad_obj(x, f, g, x_new, f_new, g_new, Q, c):
     """Exact line search
     """
+    progTol = 1e-8
     d = x_new - x
+    # Check whether step has become too small
+    if np.linalg.norm(d, np.inf)  < progTol:
+        t = 0.0
+        f_new = f
+        np.copyto(g_new, g)
+        np.copyto(x_new, x)
+        return f_new
     tmp = Q.dot(d)
     t = - (x.T.dot(tmp) + d.T.dot(c)) / d.T.dot(tmp)
     np.copyto(x_new, x + t*d)
     return quad_obj_np(x_new, Q, c, g_new) # returns f_new
 
+
+def stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min=None):
+    """Simple stopping
+    """
+    flag = False
+    stop = 'continue'
+    if i == max_iter:
+        stop = 'max_iter';
+        flag = True
+    if f_min is not None and f-f_min < opt_tol:
+        stop = 'f-f_min = {} < opt_tol'.format(f-f_min)
+        flag = True
+    if abs(f_old-f) < prog_tol:
+        stop = '|f_old-f| = {} < prog_tol'.format(abs(f_old-f))
+        flag = True
+    return flag, stop

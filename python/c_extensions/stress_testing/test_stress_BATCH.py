@@ -34,7 +34,7 @@ class TestStressBatch(unittest.TestCase):
         iters_batch = []
         precision_cvxopt = []
         precision_batch = []
-        for i,n in enumerate([10, 100, 500]): # dimension of features
+        for i,n in enumerate([100, 1000, 10000]): # dimension of features
             m = 1.5*n # number of measurements
             A = np.random.randn(m, n)
             x_true = abs(np.random.randn(n,1))
@@ -80,7 +80,8 @@ class TestStressBatch(unittest.TestCase):
             x_true = x_true.flatten()
             start_time = time.time()
             # Batch gradient descent
-            sol = batch.solve(obj_np, proj, line_search_exact, x0)
+            #sol = batch.solve(obj_np, proj, line_search_exact, x0)
+            sol = batch.solve_BB(obj_np, proj, line_search_exact, x0, prog_tol=1e-12, Q=Q)
             times_batch.append(time.time() - start_time)
             precision_batch.append(np.linalg.norm(sol['x']-x_true))
             iters_batch.append(sol['iterations'])

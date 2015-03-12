@@ -107,7 +107,8 @@ def line_search_exact_quad_obj(x, f, g, x_new, f_new, g_new, Q, c):
     """Exact line search
     """
     d = x_new - x
-    t = - (d.T.dot(Q.dot(x)+c)) / d.T.dot(Q).dot(d)
+    tmp = Q.dot(d)
+    t = - (x.T.dot(tmp) + d.T.dot(c)) / d.T.dot(tmp)
     np.copyto(x_new, x + t*d)
     return quad_obj_np(x_new, Q, c, g_new) # returns f_new
 

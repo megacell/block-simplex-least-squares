@@ -121,6 +121,7 @@ def block_sizes_to_x0(block_sizes):
     for i in np.cumsum(block_sizes)-1: x0[(i,0)] = 1
     return x0.transpose()
 
+
 def block_sizes_to_N(block_sizes):
     """Converts a list of the block sizes to a scipy.sparse matrix.
 
@@ -145,6 +146,29 @@ def block_sizes_to_N(block_sizes):
         start_row += block_size
         start_col += block_size - 1
     return sparse(N)
+
+
+def block_starts_to_N(block_starts, n):
+    """Convert a list of the block_starts to numpy array
+    """
+    block_sizes = np.append(block_starts[1:], [n]) - block_starts
+    m = np.sum(block_sizes)
+    n = m - block_sizes.shape[0]
+    N = np.zeros((m,n))
+    start_row = 0
+    start_col = 0
+    for i, block_size in enumerate(block_sizes):
+        if block_size < 2:
+            start_row += block_size
+            start_col += block_size - 1
+            continue
+        for j in xrange(block_size-1):
+            N[start_row+j, start_col+j] = 1
+            N[start_row+j+1, start_col+j] = -1
+        start_row += block_size
+        start_col += block_size - 1
+    return N
+
 
 def x2z(x, block_sizes):
     """

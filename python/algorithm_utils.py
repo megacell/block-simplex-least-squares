@@ -79,6 +79,8 @@ def quad_obj_np(x, Q, c, g):
 
 
 def line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c):
+    """Backtracking line search
+    """
     t = 1.0
     suffDec = 1e-4
     progTol = 1e-8
@@ -99,3 +101,13 @@ def line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c):
         upper_line = f + suffDec * g.dot(x_new - x)
 
     return f_new
+
+
+def line_search_exact_quad_obj(x, f, g, x_new, f_new, g_new, Q, c):
+    """Exact line search
+    """
+    d = x_new - x
+    t = - (d.T.dot(Q.dot(x)+c)) / d.T.dot(Q).dot(d)
+    np.copyto(x_new, x + t*d)
+    return quad_obj_np(x_new, Q, c, g_new) # returns f_new
+

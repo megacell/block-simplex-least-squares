@@ -36,8 +36,8 @@ def solve(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
             stop = 'stop with max_iter'; break
         if f_min is not None and f-f_min < opt_tol:
             stop = 'stop with f-f_min < opt_tol'; break
-        if f_old-f < prog_tol:
-            stop = 'stop with f_old-f < prog_tol'; break
+        if abs(f_old-f) < prog_tol:
+            stop = 'stop with abs(f_old-f) < prog_tol'; break
         #t_stop += time.time() - start_time 
         # update and project x
         #start_time = time.time()

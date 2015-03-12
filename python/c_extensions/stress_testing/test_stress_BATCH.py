@@ -7,7 +7,9 @@ sys.path.append('../../../')
 from python.c_extensions.c_extensions import (proj_simplex_c,
                                        quad_obj_c, 
                                        line_search_quad_obj_c)
-from python.algorithm_utils import quad_obj_np, line_search_quad_obj_np
+from python.algorithm_utils import (quad_obj_np, 
+                                line_search_quad_obj_np, 
+                                line_search_exact_quad_obj)
 import python.BATCH as batch
 from python.bsls_utils import almost_equal
 
@@ -50,34 +52,39 @@ class TestStressBatch(unittest.TestCase):
             times_cvxopt.append(time.time() - start_time)
             iters_cvxopt.append(sol['iterations'])
             precision_cvxopt.append(np.linalg.norm(sol['x']-x_true))
-            #assert almost_equal(sol['x'], x_true, 1e-6)
+            # assert almost_equal(sol['x'], x_true, 1e-6)
             c = c.flatten()
 
             x0 = np.ones(n) / n
 
             def proj(x):
                 proj_simplex_c(x, 0, n)
+            
+            # different types of line search
+            def line_search_exact(x, f, g, x_new, f_new, g_new, i):
+                return line_search_exact_quad_obj(x, f, g, x_new, f_new, g_new, Q, c) # returns f_new
 
             def line_search_c(x, f, g, x_new, f_new, g_new, i):
                 return line_search_quad_obj_c(x, f, g, x_new, f_new, g_new, Q_flat, c)
 
-
+            def line_search_np(x, f, g, x_new, f_new, g_new, i):
+                return line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c)
+            
+            # different types of objective
             def obj_c(x, g):
                 return quad_obj_c(x, Q_flat, c, g)
 
             def obj_np(x, g):
                 return quad_obj_np(x, Q, c, g)
 
-            def line_search_np(x, f, g, x_new, f_new, g_new, i):
-                return line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c)
-
-
             x_true = x_true.flatten()
             start_time = time.time()
-            sol = batch.solve(obj_np, proj, line_search_np, x0)
+            # Batch gradient descent
+            sol = batch.solve(obj_np, proj, line_search_exact, x0)
             times_batch.append(time.time() - start_time)
             precision_batch.append(np.linalg.norm(sol['x']-x_true))
             iters_batch.append(sol['iterations'])
+            print sol['stop']
             if i == 2:
                 print 't_proj:', sol['t_proj']
                 print 't_obj:', sol['t_obj']

@@ -2,7 +2,6 @@ import unittest
 import time
 import numpy as np
 import cvxopt as copt
-from cvxopt import matrix, spdiag, spmatrix, solvers
 import sys
 sys.path.append('../../../')
 from python.c_extensions.c_extensions import (proj_simplex_c,
@@ -29,7 +28,7 @@ class TestStressBatch(unittest.TestCase):
         # test on constrainted least squares problem
         # min ||Ax-b||^2 = x'A'Ax - 2 b'Ax
         # s.t. ||x||_1 = 1, x>=0
-        solvers.options['show_progress'] = False
+        copt.solvers.options['show_progress'] = False
         times_cvxopt = []
         times_batch = []
         times_batch2 = []

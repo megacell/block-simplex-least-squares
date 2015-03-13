@@ -114,7 +114,16 @@ def block_starts_to_block_sizes(block_starts, n):
     return np.append(block_starts[1:], [n]) - block_starts
 
 
-def block_sizes_to_x0(block_sizes):
+def block_starts_to_x0(block_starts, n):
+    """Convert block_starts to np.array vector x0 with 1 dimension
+    """
+    x0 = np.zeros(n)
+    for i in block_starts[1:]-1: x0[i] = 1.0
+    x0[n-1] = 1.0
+    return x0
+
+
+def block_sizes_to_x0_sparse(block_sizes):
     """Converts a list of the block sizes to a scipy.sparse vector x0
     """
     x0 = sps.dok_matrix((np.sum(block_sizes),1))
@@ -149,7 +158,7 @@ def block_sizes_to_N(block_sizes):
 
 
 def block_starts_to_N(block_starts, n):
-    """Convert a list of the block_starts to numpy array
+    """Convert a list of the block_starts to numpy array N
     """
     block_sizes = np.append(block_starts[1:], [n]) - block_starts
     m = np.sum(block_sizes)
@@ -170,13 +179,39 @@ def block_starts_to_N(block_starts, n):
     return N
 
 
-def x2z(x, block_sizes):
+def Q_to_Q_in_z(Q, block_starts):
+    """Converts Q (Hessian of quadratic function)
+    """
+    n = Q.shape[0]
+    N = block_starts_to_N(block_starts, n)
+    return N.T.dot(Q).dot(N)
+
+
+def qp_to_qp_in_z(Q, c, block_starts):
+    """Convert qp to qp in z 
+    """
+    n = Q.shape[0]
+    x0 = block_starts_to_x0(block_starts, n)
+    N = block_starts_to_N(block_starts, n)
+    Qz = Q_to_Q_in_z(Q, block_starts)
+    cz = N.T.dot(c + Q.dot(x0))
+    cz = cz.flatten()
+    # f0 is the objective value at x=x0
+    f0 = 0.5 * x0.T.dot(Q).dot(x0) + c.T.dot(x0)
+    return Qz, cz, N, x0, f0
+
+
+def x2z(x, block_sizes=None, block_starts=None):
     """
     Convert x (original splits) to z variable (eliminated eq constraint)
     :param x:
     :param block_sizes:
     :return:
     """
+    assert block_sizes is not None or block_starts is not None
+    if block_sizes is None:
+        n = x.shape[0]
+        block_sizes = np.append(block_starts[1:], [n]) - block_starts
     p = len(block_sizes)
     ind_end = np.cumsum(block_sizes)
     ind_start = np.hstack(([0],ind_end[:-1]))

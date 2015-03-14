@@ -25,7 +25,7 @@ class TestCplex(unittest.TestCase):
                Aeq = [0, 1, -1],
                beq = 25.5,
                ub = [15,inf,inf])
-        r = p._solve('cvxopt_qp', iprint = 0)
+        r = p._solve('cplex', iprint = 0)
         f_opt, x_opt = r.ff, r.xf
         np.testing.assert_almost_equal(f_opt,  -1190.35)
         np.testing.assert_almost_equal(x_opt, [-15. ,  -2.3, -27.8 ])

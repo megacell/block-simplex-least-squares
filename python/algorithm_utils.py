@@ -157,6 +157,8 @@ def stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min=None):
 
 
 def normalization(x, block_starts, block_ends):
-        for start, end in zip(block_starts, block_ends):
-            np.copyto(x[start:end], x[start:end] / np.sum(x[start:end]))
+    """Normalize x
+    """
+    for start, end in zip(block_starts, block_ends):
+        np.copyto(x[start:end], x[start:end] / np.sum(x[start:end]))
 

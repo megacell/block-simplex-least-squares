@@ -212,8 +212,8 @@ def solve_MD(obj, proj, step_size, x_init, line_search=None, f_min=None, opt_tol
           max_iter=5000, prog_tol=1e-9):
     """mirror descent algorithm
     """
-    n = x0.shape[0]
-    x = x0
+    n = x_init.shape[0]
+    x = x_init
     g = np.zeros(n)
     g_new = np.zeros(n)
     x_new = np.zeros(n)
@@ -225,7 +225,7 @@ def solve_MD(obj, proj, step_size, x_init, line_search=None, f_min=None, opt_tol
         if flag is True: break
         # update x
         t = step_size(i)
-        np.copyto(x_new, x * np.exp(-g))
+        np.copyto(x_new, x * np.exp(-t*g))
         # for mirror descent with KL divergence, proj is a normalization
         proj(x_new)
         f_new = obj(x_new, g_new)

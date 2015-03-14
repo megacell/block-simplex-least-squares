@@ -6,7 +6,8 @@ sys.path.append('../../')
 from python.c_extensions.c_extensions import proj_simplex_c, isotonic_regression_c
 from python.algorithm_utils import (quad_obj_np, 
                                     line_search_quad_obj_np,
-                                    decreasing_step_size)
+                                    decreasing_step_size,
+                                    normalization)
 import python.BATCH as batch
 from python.bsls_utils import (almost_equal, 
                                x2z, 
@@ -50,11 +51,13 @@ class TestBatch(unittest.TestCase):
         return Q, c, x_true, f_min, min_eig
 
 
-    def get_solver_parts(self, Q, c, min_eig, in_z = False):
+    def get_solver_parts(self, Q, c, min_eig, in_z=False, md=False, block_starts=None):
+        """Returns the step_size, proj, line_search, and obj functions
+        """
+        assert (in_z and md) is False
         def step_size(i):
             return decreasing_step_size(i, 1.0, min_eig)
 
-        # if in_z is False:
         def proj(x):
             proj_simplex_c(x, 0, Q.shape[0])
         if in_z:
@@ -62,6 +65,11 @@ class TestBatch(unittest.TestCase):
                 isotonic_regression_c(x, 0, Q.shape[0])
                 np.maximum(0.,x,x)
                 np.minimum(1.,x,x)
+        if md:
+            assert block_starts is not None
+            block_ends = np.append(block_starts[1:], [Q.shape[0]])
+            def proj(x):
+                normalization(x, block_starts, block_ends)
 
         def line_search(x, f, g, x_new, f_new, g_new, i):
             return line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c)
@@ -275,6 +283,38 @@ class TestBatch(unittest.TestCase):
             sol = batch.solve_LBFGS(obj, proj, line_search, z_init, f_min=f_min)
             assert obj(sol['x']) - f_min < 1e-1
 
+
+    def test_md_solver_in_x(self):
+        block_starts = np.array([0])
+        Q, c, x_true, f_min, min_eig = self.generate_small_qp()
+        step_size, proj, line_search, obj = self.get_solver_parts(Q, c, 
+            min_eig, md=True, block_starts=block_starts)
+        x_init = np.array([.5, .5])
+        sol = batch.solve_MD(obj, proj, step_size, x_init)
+        assert almost_equal(sol['x'], x_true, 1e-2)
+        #assert sol['stop'][-10:] == '< prog_tol'
+        x_init = np.array([.5, .5])
+        sol = batch.solve_MD(obj, proj, step_size, x_init, f_min=f_min)
+        assert almost_equal(sol['x'], x_true, 1e-2)
+        #assert sol['stop'][-10:] == ' < opt_tol'
+        x_init = np.array([.5, .5])
+        sol = batch.solve_MD(obj, proj, step_size, x_init, line_search)
+        assert almost_equal(sol['x'], x_true, 1e-2)
+
+
+    def test_md_solver_in_x_2(self):
+        block_starts = np.array([0])
+        for i in range(5):
+            n, m = 7, 10
+            Q, c, x_true, f_min, min_eig = self.generate_random_qp(m, n)
+            step_size, proj, line_search, obj = self.get_solver_parts(Q, c, 
+                min_eig, md=True, block_starts=block_starts)
+            x_init = np.ones(n) / n
+            sol = batch.solve_MD(obj, proj, step_size, x_init, f_min=f_min)
+            assert obj(sol['x']) - f_min < 1e-2
+            x_init = np.ones(n) / n
+            sol = batch.solve_MD(obj, proj, step_size, x_init, line_search, f_min=f_min)
+            assert obj(sol['x']) - f_min < 1e-2
 
 
 if __name__ == '__main__':

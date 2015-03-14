@@ -187,6 +187,14 @@ def Q_to_Q_in_z(Q, block_starts):
     return N.T.dot(Q).dot(N)
 
 
+def construct_qp_from_least_squares(A, b):
+    """0.5 * ||Ax-b||^2_2 = 0.5 x'Qx + c'x
+    """
+    Q = A.T.dot(A)
+    c = -A.T.dot(b).flatten()
+    return Q, c
+
+
 def qp_to_qp_in_z(Q, c, block_starts):
     """Convert qp to qp in z 
     """

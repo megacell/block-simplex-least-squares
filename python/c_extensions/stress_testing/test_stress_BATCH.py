@@ -8,9 +8,9 @@ from python.c_extensions.c_extensions import (proj_simplex_c,
                                        quad_obj_c, 
                                        line_search_quad_obj_c,
                                        isotonic_regression_c)
-from python.algorithm_utils import (quad_obj_np, 
-                                line_search_quad_obj_np, 
-                                line_search_exact_quad_obj)
+from python.algorithm_utils import (quad_obj_np,
+                                    decreasing_step_size,
+                                    line_search_quad_obj_np)
 import python.BATCH as batch
 from python.bsls_utils import almost_equal, x2z, qp_to_qp_in_z
 
@@ -21,7 +21,7 @@ class TestStressBatch(unittest.TestCase):
 
     def setUp(self):
         seed = 237423433
-        seed = 0
+        #seed = 0
         np.random.seed(seed)
     
 
@@ -32,14 +32,21 @@ class TestStressBatch(unittest.TestCase):
         copt.solvers.options['show_progress'] = False
         times_cvxopt = []
         times_batch = []
-        times_batch2 = []
+        times_batchz = []
+        times_lbfgs = []
+        times_lbfgsz = []
         iters_cvxopt = []
         iters_batch = []
-        iters_batch2 = []
+        iters_batchz = []
+        iters_lbfgs = []
+        iters_lbfgsz = []
         precision_cvxopt = []
         precision_batch = []
-        precision_batch2 = []
-        for i,n in enumerate([100, 500, 1000]): # dimension of features
+        precision_batchz = []
+        precision_lbfgs = []
+        precision_lbfgsz = []
+
+        for i,n in enumerate([100, 1000, 2000]): # dimension of features
 
             # initialize matrices for x variable
 
@@ -55,13 +62,11 @@ class TestStressBatch(unittest.TestCase):
             h = copt.matrix([1.]*n, (n,1))
             U = copt.matrix([1.]*n, (1,n))
             f = copt.matrix(1.0)
-            x_init = np.ones(n) / n
             block_starts = np.array([0])
             num_blocks = len(block_starts)
 
             # converts into z-variable
             Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts)
-            z_init = x2z(x_init, block_starts=block_starts)
 
             # define obj, line_search, proj
             def proj(x):
@@ -72,11 +77,21 @@ class TestStressBatch(unittest.TestCase):
                 np.maximum(0.,x,x)
                 np.minimum(1.,x,x)
             
-            def line_search_exact(x, f, g, x_new, f_new, g_new, i):
-                return line_search_exact_quad_obj(x, f, g, x_new, f_new, g_new, Q, c) # returns f_new
+            def step_size(i):
+                t0 = 1.0 
+                alpha = 8.0
+                return decreasing_step_size(i, t0, alpha)
+
+            def step_size_z(i):
+                t0 = 1.0 
+                alpha = 8.0
+                return decreasing_step_size(i, t0, alpha)
+
+            def line_search(x, f, g, x_new, f_new, g_new, i):
+                return line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c) # returns f_new
             
-            def line_search_exactz(x, f, g, x_new, f_new, g_new, i):
-                return line_search_exact_quad_obj(x, f, g, x_new, f_new, g_new, Qz, cz) # returns f_new
+            def line_searchz(x, f, g, x_new, f_new, g_new, i):
+                return line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Qz, cz) # returns f_new
 
             def obj_np(x, g):
                 return quad_obj_np(x, Q, c, g) # returns f
@@ -94,48 +109,87 @@ class TestStressBatch(unittest.TestCase):
             
             # CPLEX
 
-            # Bath gradient in x
+            # Batch gradient in x
             
+            x_init = np.ones(n) / n
             x_true = x_true.flatten()
             start_time = time.time()
-            #sol = batch.solve(obj_np, proj, line_search_exact, x_init)
-            sol = batch.solve_BB(obj_np, proj, line_search_exact, x_init)
+            #sol = batch.solve(obj_np, proj, line_search, x_init)
+            sol = batch.solve(obj_np, proj, step_size, x_init, max_iter=1000)
             times_batch.append(time.time() - start_time)
             precision_batch.append(np.linalg.norm(sol['x']-x_true))
             iters_batch.append(sol['iterations'])
-            #print sol['stop']
+            print sol['stop']
             if i == 2:
                 print 't_proj:', sol['t_proj']
                 print 't_obj:', sol['t_obj']
                 print 't_line:', sol['t_line']
 
+            # Batch gradient in z
 
-            # Bath gradient in z
-            
+            x_init = np.ones(n) / n
+            z_init = x2z(x_init, block_starts=block_starts)
             start_time = time.time()
-            #sol = batch.solve(obj_npz, projz, line_search_exactz, z_init)
-            sol = batch.solve_BB(obj_npz, projz, line_search_exactz, z_init)
-            times_batch2.append(time.time() - start_time)
+            sol = batch.solve(obj_npz, projz, step_size_z, z_init, max_iter=1000)
+            times_batchz.append(time.time() - start_time)
             x_final = N.dot(sol['x']) + x0
-            precision_batch2.append(np.linalg.norm(x_final-x_true))
-            iters_batch2.append(sol['iterations'])
-            #print sol['stop']
+            precision_batchz.append(np.linalg.norm(x_final-x_true))
+            iters_batchz.append(sol['iterations'])
             if i == 2:
                 print 't_proj:', sol['t_proj']
                 print 't_obj:', sol['t_obj']
                 print 't_line:', sol['t_line']
+
+            # l-BFGS in x
+            
+            x_init = np.ones(n) / n
+            start_time = time.time()
+            #sol = batch.solve(obj_npz, projz, line_searchz, z_init)
+            sol = batch.solve_LBFGS(obj_np, proj, line_search, x_init)
+            times_lbfgs.append(time.time() - start_time)
+            precision_lbfgs.append(np.linalg.norm(sol['x']-x_true))
+            iters_lbfgs.append(sol['iterations'])
+            #print sol['stop']
+            # if i == 2:
+            #     print 't_proj:', sol['t_proj']
+            #     print 't_obj:', sol['t_obj']
+            #     print 't_line:', sol['t_line']
+
+            # l-BFGS in z
+            
+            x_init = np.ones(n) / n
+            z_init = x2z(x_init, block_starts=block_starts)
+            start_time = time.time()
+            #sol = batch.solve(obj_npz, projz, line_searchz, z_init)
+            sol = batch.solve_LBFGS(obj_npz, projz, line_searchz, z_init)
+            print sol['stop']
+            times_lbfgsz.append(time.time() - start_time)
+            x_final = N.dot(sol['x']) + x0
+            precision_lbfgsz.append(np.linalg.norm(x_final-x_true))
+            iters_lbfgsz.append(sol['iterations'])
+            #print sol['stop']
+            # if i == 2:
+            #     print 't_proj:', sol['t_proj']
+            #     print 't_obj:', sol['t_obj']
+            #     print 't_line:', sol['t_line']
 
         # display results
 
         print 'times cvxopt', times_cvxopt
         print 'times batch', times_batch
-        print 'times batch2', times_batch2
+        print 'times batchz', times_batchz
+        print 'times lbfgs', times_lbfgs
+        print 'times lbfgsz', times_lbfgsz
         print 'iterations cvxopt', iters_cvxopt
         print 'iterations batch', iters_batch
-        print 'iterations batch2', iters_batch2
+        print 'iterations batchz', iters_batchz
+        print 'iterations lbfgs', iters_lbfgs
+        print 'iterations lbfgsz', iters_lbfgsz
         print 'precision cvxopt', precision_cvxopt
         print 'precision batch', precision_batch
-        print 'precision batch2', precision_batch2
+        print 'precision batchz', precision_batchz
+        print 'precision lbfgs', precision_lbfgs
+        print 'precision lbfgsz', precision_lbfgsz
 
 
 if __name__ == '__main__':

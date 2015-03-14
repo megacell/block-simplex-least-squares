@@ -1,16 +1,16 @@
 import numpy as np
 import time
-from algorithm_utils import stopping
+from algorithm_utils import stopping, decreasing_step_size
 from collections import deque
 
 
-def solve(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6, 
+def solve(obj, proj, step_size, x_init, line_search=None, f_min=None, opt_tol=1e-6, 
           max_iter=1000, prog_tol=1e-9):
     """Projected batch gradient descent with line search
     obj: f,g = obj(x) with f the objective value and g the gradient at x
     proj: w = proj(x)
-    line_search: customized line search for the obj function
-    x0: initial point
+    step_size: step_size
+    x_init: initial point
     f_min: optimal objective value
     opt_tol: stop when f-f_min < opt_tol
     max_iter: stop when iter == max_iter 
@@ -20,8 +20,8 @@ def solve(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
     t_obj = 0.
     t_line = 0.
     # allocate memories and initialize
-    n = x0.shape[0]
-    x = x0
+    n = x_init.shape[0]
+    x = x_init
     g = np.zeros(n)
     g_new = np.zeros(n)
     x_new = np.zeros(n)
@@ -32,7 +32,8 @@ def solve(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
         flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)
         if flag is True: break
         # update and project x
-        np.add(x, -g, x_new) # should update content of x_new
+        t = step_size(i)
+        np.add(x, -t*g, x_new) # should update content of x_new
         start_time = time.time()
         proj(x_new)
         t_proj += time.time() - start_time
@@ -41,7 +42,8 @@ def solve(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
         t_obj += time.time() - start_time
         # do line search between x and x_new, should update x_new, g_new
         start_time = time.time()
-        f_new = line_search(x, f, g, x_new, f_new, g_new, i)
+        if line_search is not None:
+            f_new = line_search(x, f, g, x_new, f_new, g_new, i)
         t_line += time.time() - start_time
         # take step
         f_old = f
@@ -53,13 +55,13 @@ def solve(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
             't_proj': t_proj, 't_obj': t_obj, 't_line': t_line}
 
 
-def solve_BB(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6, 
+def solve_BB(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6, 
           max_iter=1000, prog_tol=1e-9):
     """Projected batch gradient descent with Barzilei-Bornwein step 
     obj: f,g = obj(x) with f the objective value and g the gradient at x
     proj: w = proj(x)
     line_search: customized line search for the obj function
-    x0: initial point
+    x_init: initial point
     f_min: optimal objective value
     opt_tol: stop when f-f_min < opt_tol
     max_iter: stop when iter == max_iter 
@@ -69,8 +71,8 @@ def solve_BB(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
     t_obj = 0.
     t_line = 0.
     # allocate memories and initialize
-    n = x0.shape[0]
-    x = x0
+    n = x_init.shape[0]
+    x = x_init
     g = np.zeros(n)
     delta_x = np.zeros(n)
     delta_g = np.zeros(n)
@@ -96,7 +98,7 @@ def solve_BB(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
         t_obj += time.time() - start_time
         # do line search between x and x_new, should update x_new, g_new
         start_time = time.time()
-        if i == 1: f_new = line_search(x, f, g, x_new, f_new, g_new, i)
+        f_new = line_search(x, f, g, x_new, f_new, g_new, i)
         t_line += time.time() - start_time
         # take step
         f_old = f
@@ -111,13 +113,13 @@ def solve_BB(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
 
 
 
-def solve_LBFGS(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6, 
-          max_iter=1000, prog_tol=1e-9, corrections=10):
+def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6, 
+          max_iter=1000, prog_tol=1e-9, corrections=50):
     """Projected batch gradient descent with Barzilei-Bornwein step 
     obj: f,g = obj(x) with f the objective value and g the gradient at x
     proj: w = proj(x)
     line_search: customized line search for the obj function
-    x0: initial point
+    x_init: initial point
     f_min: optimal objective value
     opt_tol: stop when f-f_min < opt_tol
     max_iter: stop when iter == max_iter 
@@ -132,8 +134,8 @@ def solve_LBFGS(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
     t_obj = 0.
     t_line = 0.
     # allocate memories and initialize
-    n = x0.shape[0]
-    x = x0
+    n = x_init.shape[0]
+    x = x_init
     g = np.zeros(n)
     d = np.zeros(n) # search direction computed by LBFGS step
     alpha = np.zeros(corrections) # used in LBFGS
@@ -172,8 +174,8 @@ def solve_LBFGS(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
         t_obj += time.time() - start_time
         # do line search between x and x_new, should update x_new, g_new
         start_time = time.time()
-        # consider having line search all the time
-        if i <= 2: f_new = line_search(x, f, g, x_new, f_new, g_new, i)
+        # CONSIDER HAVING LINE SEARCH FOR ALL ITERATIONS
+        f_new = line_search(x, f, g, x_new, f_new, g_new, i)
         t_line += time.time() - start_time
         # take step
         f_old = f
@@ -190,7 +192,7 @@ def solve_LBFGS(obj, proj, line_search, x0, f_min=None, opt_tol=1e-6,
 def LBFGS_helper(q_delta_g, q_delta_x, q_rho, g, d, alpha):
     m = len(q_delta_g)
     np.copyto(d, g)
-    for j in range(1,m+1):
+    for j in range(2,m+1):
         alpha[-j] = q_rho[-j] * q_delta_x[-j].T.dot(d)
         d -= alpha[-j] * q_delta_g[-j]
 
@@ -198,7 +200,7 @@ def LBFGS_helper(q_delta_g, q_delta_x, q_rho, g, d, alpha):
     #print 't = ', t
     d *= t
 
-    for j in range(m):
+    for j in range(m-1):
         beta = q_rho[j] * q_delta_g[j].T.dot(d)
         d += q_delta_x[j] * (alpha[-m+j] - beta)
     #print '||d|| =', np.linalg.norm(d)
@@ -206,5 +208,32 @@ def LBFGS_helper(q_delta_g, q_delta_x, q_rho, g, d, alpha):
     d *= -1.0
 
 
-
+def solve_MD(obj, proj, step_size, x_init, line_search=None, f_min=None, opt_tol=1e-6, 
+          max_iter=5000, prog_tol=1e-9):
+    """mirror descent algorithm
+    """
+    n = x0.shape[0]
+    x = x0
+    g = np.zeros(n)
+    g_new = np.zeros(n)
+    x_new = np.zeros(n)
+    f_old = np.inf
+    i = 1
+    f = obj(x, g) # should update content of g
+    while True:
+        flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)
+        if flag is True: break
+        # update x
+        t = step_size(i)
+        np.copyto(x_new, x * np.exp(-g))
+        # for mirror descent with KL divergence, proj is a normalization
+        proj(x_new)
+        f_new = obj(x_new, g_new)
+        # take step
+        f_old = f
+        f = f_new
+        np.copyto(x, x_new)
+        np.copyto(g, g_new)
+        i += 1
+    return {'f': f, 'x': x, 'stop': stop, 'iterations': i}
 

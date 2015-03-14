@@ -53,40 +53,5 @@ def least_squares(A, b, blocks, iters=1000, tolerance=1e-9):
     return x
 
 
-def solve(obj, block_starts, x0, f_min=None, opt_tol=1e-6, 
-          max_iter=5000, prog_tol=1e-9):
-    """mirror descent algorithm
-    """
-    n = x0.shape[0]
-    x = x0
-    g = np.zeros(n)
-    g_new = np.zeros(n)
-    x_new = np.zeros(n)
-    f_old = np.inf
-    i = 1
-    f = obj(x, g) # should update content of g
-    block_ends = np.append(block_starts[1:], [n])
-    while True:
-        flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)
-        if flag is True: break
-        # update x
-        np.copyto(x_new, x * np.exp(-g))
-        #print x
-        #print block_starts
-        #print block_ends
-        for start, end in zip(block_starts, block_ends):
-            np.copyto(x_new[start:end], x_new[start:end] / np.sum(x_new[start:end]))
-        f_new = obj(x_new, g_new)
-        # take step
-        f_old = f
-        f = f_new
-        np.copyto(x, x_new)
-        np.copyto(g, g_new)
-        i += 1
-    return {'f': f, 'x': x, 'stop': stop, 'iterations': i}
-
-
-
-
 if __name__ == '__main__':
     test_least_squares()

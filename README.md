@@ -20,6 +20,38 @@ Set up the pre-commit hook (which automatically runs the fast unit tests):
 
       ln -s ../../pre-commit.sh .git/hooks/pre-commit
 
+
+CPLEX Setup
+-----------
+
+First download CPLEX for your OS from the IBM website (you'll need to sign up
+for an academic initiative account first). It would be a file named
+`CPLEX_xxxxxxxxxx.bin`.
+
+To install, run (using `sudo` if necessary):
+
+```
+chmod +x CPLEX_xxxxxxxxxx.bin
+./CPLEX_xxxxxxxxxx.bin
+```
+
+Note the installation directory, then to install the python bindings (using
+`sudo` if necessary, for OSX users you might need to run `sudo -s` first before
+these steps):
+
+```
+cd <installation-directory>/ILOG/CPLEX_Studio1261/cplex/python/2.7/x86-64_linux
+python setup.py install
+```
+
+Install openopt (documentation here: http://openopt.org/cplex):
+```
+pip install openopt
+```
+
+To see an example on how to use CPLEX, look at `tests/fast/test_cplex.py`
+
+
 Running via Python
 -------------------
 Run the python implementation from the `traffic-estimation/python` directory.
@@ -55,11 +87,11 @@ MATLAB dependencies (must be run every time MATLAB is started):
 
 
 c_extensions setup
------------------    
+-----------------
 To bind Cythonic extensions to Python
 
     cd python/c_extensions
-    python setup.py build_ext --inplace 
+    python setup.py build_ext --inplace
 
 check if it created an executable 'c_extensions.so' and 'c_extensions.cpp'
 
@@ -69,4 +101,4 @@ Run `main.m`.
 
 References
 --------
-Mark Schmidt's [L1General](http://www.di.ens.fr/~mschmidt/Software/L1General.html), a set of Matlab routines for solving L1-regularization problems. 
+Mark Schmidt's [L1General](http://www.di.ens.fr/~mschmidt/Software/L1General.html), a set of Matlab routines for solving L1-regularization problems.

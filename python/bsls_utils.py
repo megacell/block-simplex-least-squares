@@ -114,12 +114,22 @@ def block_starts_to_block_sizes(block_starts, n):
     return np.append(block_starts[1:], [n]) - block_starts
 
 
-def block_sizes_to_x0(block_sizes):
+def block_starts_to_x0(block_starts, n):
+    """Convert block_starts to np.array vector x0 with 1 dimension
+    """
+    x0 = np.zeros(n)
+    for i in block_starts[1:]-1: x0[i] = 1.0
+    x0[n-1] = 1.0
+    return x0
+
+
+def block_sizes_to_x0_sparse(block_sizes):
     """Converts a list of the block sizes to a scipy.sparse vector x0
     """
     x0 = sps.dok_matrix((np.sum(block_sizes),1))
     for i in np.cumsum(block_sizes)-1: x0[(i,0)] = 1
     return x0.transpose()
+
 
 def block_sizes_to_N(block_sizes):
     """Converts a list of the block sizes to a scipy.sparse matrix.
@@ -146,13 +156,70 @@ def block_sizes_to_N(block_sizes):
         start_col += block_size - 1
     return sparse(N)
 
-def x2z(x, block_sizes):
+
+def block_starts_to_N(block_starts, n):
+    """Convert a list of the block_starts to numpy array N
+    """
+    block_sizes = np.append(block_starts[1:], [n]) - block_starts
+    m = np.sum(block_sizes)
+    n = m - block_sizes.shape[0]
+    N = np.zeros((m,n))
+    start_row = 0
+    start_col = 0
+    for i, block_size in enumerate(block_sizes):
+        if block_size < 2:
+            start_row += block_size
+            start_col += block_size - 1
+            continue
+        for j in xrange(block_size-1):
+            N[start_row+j, start_col+j] = 1
+            N[start_row+j+1, start_col+j] = -1
+        start_row += block_size
+        start_col += block_size - 1
+    return N
+
+
+def Q_to_Q_in_z(Q, block_starts):
+    """Converts Q (Hessian of quadratic function)
+    """
+    n = Q.shape[0]
+    N = block_starts_to_N(block_starts, n)
+    return N.T.dot(Q).dot(N)
+
+
+def construct_qp_from_least_squares(A, b):
+    """0.5 * ||Ax-b||^2_2 = 0.5 x'Qx + c'x
+    """
+    Q = A.T.dot(A)
+    c = -A.T.dot(b).flatten()
+    return Q, c
+
+
+def qp_to_qp_in_z(Q, c, block_starts):
+    """Convert qp to qp in z 
+    """
+    n = Q.shape[0]
+    x0 = block_starts_to_x0(block_starts, n)
+    N = block_starts_to_N(block_starts, n)
+    Qz = Q_to_Q_in_z(Q, block_starts)
+    cz = N.T.dot(c + Q.dot(x0))
+    cz = cz.flatten()
+    # f0 is the objective value at x=x0
+    f0 = 0.5 * x0.T.dot(Q).dot(x0) + c.T.dot(x0)
+    return Qz, cz, N, x0, f0
+
+
+def x2z(x, block_sizes=None, block_starts=None):
     """
     Convert x (original splits) to z variable (eliminated eq constraint)
     :param x:
     :param block_sizes:
     :return:
     """
+    assert block_sizes is not None or block_starts is not None
+    if block_sizes is None:
+        n = x.shape[0]
+        block_sizes = np.append(block_starts[1:], [n]) - block_starts
     p = len(block_sizes)
     ind_end = np.cumsum(block_sizes)
     ind_start = np.hstack(([0],ind_end[:-1]))

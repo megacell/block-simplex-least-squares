@@ -70,15 +70,35 @@ def proj_multi_simplex(y, blocks):
     proj_simplex(y, blocks[-1], len(y))
 
 
-def quad_obj_np(x, Q, c, g):
+def quad_obj_np(x, Q, c, g=None):
     """Receives numpy arrays
     """
+    if g is None: g = np.zeros(x.shape[0])
     np.copyto(g, Q.dot(x) + c)
     f = .5 * x.T.dot(g + c)
     return f
 
 
+def decreasing_step_size(i, t0, alpha):
+    """step size of the form t = t0 / (1 + t0*alpha*t)
+    """
+    progTol = 1e-8
+    return t0 / (alpha*i + t0)
+    # if np.linalg.norm(x_new - x, np.inf)  < progTol:
+    #     f_new = f
+    #     np.copyto(g_new, g)
+    #     np.copyto(x_new, x)
+    # t = t0 / (alpha*i + t0)
+    # np.copyto(x_new, (1.0-t)*x + t*x_new)
+    # np.copyto(g_new, Q.dot(x_new) + c)
+    # f_new = .5 * x_new.T.dot(g_new + c)
+    # return f_new
+
+
+
 def line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c):
+    """Backtracking line search for quadratic objective
+    """
     t = 1.0
     suffDec = 1e-4
     progTol = 1e-8
@@ -99,3 +119,46 @@ def line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c):
         upper_line = f + suffDec * g.dot(x_new - x)
 
     return f_new
+
+
+def line_search_exact_quad_obj(x, f, g, x_new, f_new, g_new, Q, c):
+    """Exact line search for quadratic objective
+    """
+    progTol = 1e-8
+    d = x_new - x
+    # Check whether step has become too small
+    if np.linalg.norm(d, np.inf)  < progTol:
+        t = 0.0
+        f_new = f
+        np.copyto(g_new, g)
+        np.copyto(x_new, x)
+        return f_new
+    tmp = Q.dot(d)
+    t = - (x.T.dot(tmp) + d.T.dot(c)) / d.T.dot(tmp)
+    np.copyto(x_new, x + t*d)
+    return quad_obj_np(x_new, Q, c, g_new) # returns f_new
+
+
+def stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min=None):
+    """Simple stopping
+    """
+    flag = False
+    stop = 'continue'
+    if i == max_iter:
+        stop = 'max_iter';
+        flag = True
+    if f_min is not None and f-f_min < opt_tol:
+        stop = 'f-f_min = {} < opt_tol'.format(f-f_min)
+        flag = True
+    if abs(f_old-f) < prog_tol:
+        stop = '|f_old-f| = {} < prog_tol'.format(abs(f_old-f))
+        flag = True
+    return flag, stop
+
+
+def normalization(x, block_starts, block_ends):
+    """Normalize x
+    """
+    for start, end in zip(block_starts, block_ends):
+        np.copyto(x[start:end], x[start:end] / np.sum(x[start:end]))
+

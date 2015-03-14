@@ -4,7 +4,7 @@ from sklearn.utils import check_random_state
 import sys
 
 sys.path.append('../../')
-from python.c_extensions.python_implementation import proj_PAV
+from python.algorithm_utils import proj_PAV
 from python.c_extensions.c_extensions import (isotonic_regression_c, 
                                               isotonic_regression_multi_c)
 

@@ -16,6 +16,8 @@ from scipy.linalg import block_diag
 import scipy.sparse as sps
 import scipy.io as sio
 
+from algorithm_utils import quad_obj_np
+
 # Constraints
 PROB_SIMPLEX = 'probability simplex'
 # Reductions
@@ -447,6 +449,39 @@ def assert_scaled_incidence(M,thresh=1e-12):
     assert (np.abs(array(col_sum) - array(col_nz) * entry_val) < thresh).all(), \
         'Not a proper scaled incidence matrix, check column entries'
 
+
+def generate_small_qp():
+    Q = 2 * np.array([[2, .5], [.5, 1]])
+    c = np.array([1.0, 1.0])
+    x_true = np.array([.25, .75])       
+    w, v = np.linalg.eig(Q) # w[-1] is the smallest eigenvalue
+    f_min = 1.875
+    min_eig = w[-1]
+    return Q, c, x_true, f_min, min_eig
+
+
+def random_least_squares(m, n, sparsity=0.0):
+    """
+    Generate least squares from the standard normal distribution
+    m = # measurements
+    n = # dimension of features
+    """
+    assert sparsity < 1.0
+    A = np.random.randn(m, n)
+    x_true = abs(np.random.randn(n,1))
+    if int(sparsity * n) > 0:
+        zeros = np.random.choice(n, sparsity * n, replace=False)
+        for i in zeros: x_true[i] == 0.0
+    x_true = x_true / np.linalg.norm(x_true, 1)
+    b = A.dot(x_true)
+    x_true = x_true.flatten()
+    Q, c = construct_qp_from_least_squares(A, b)
+    w, v = np.linalg.eig(Q)
+    f_min = quad_obj_np(x_true, Q, c)
+    min_eig = w[-1]
+    return Q, c, x_true, f_min, min_eig
+
+
 def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
                   tolerance=1e-10):
     """
@@ -481,7 +516,10 @@ def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
     assert la.norm(U.dot(x)-f) < tolerance, "Ux!=f after permuting"
     assert la.norm(A.dot(x)-b) < tolerance, "Ax!=b after permuting"
 
-    data = { 'A': A, 'b': b, 'x_true': x, 'U': U, 'f': f }
+    block_starts = np.append([0], np.cumsum(block_sizes[:-1]))
+
+    data = { 'A': A, 'b': b, 'x_true': x, 'U': U, 'f': f, 'block_starts': block_starts }
+
     if fname:
         scipy.io.savemat(fname, data, oned_as='column')
     return data

@@ -1,4 +1,4 @@
-
+*.pkl
 
 python/config.py
 python/tmp/*

@@ -1,6 +1,8 @@
 
-
+from python.c_extensions.c_extensions import proj_simplex_c, isotonic_regression_c
 import numpy as np
+import scipy.sparse as sps
+
 
 __author__ = 'jeromethai'
 
@@ -79,6 +81,15 @@ def quad_obj_np(x, Q, c, g=None):
     return f
 
 
+def sparse_least_squares_obj(x, A_sparse_T, A_sparse, b, g):
+    """Sparse computation of least squares objective and gradient
+    """
+    tmp = A_sparse.dot(x) - b
+    np.copyto(g, A_sparse_T.dot(tmp))
+    f = .5 * tmp.T.dot(tmp)
+    return f
+
+
 def decreasing_step_size(i, t0, alpha):
     """step size of the form t = t0 / (1 + t0*alpha*t)
     """
@@ -95,8 +106,7 @@ def decreasing_step_size(i, t0, alpha):
     # return f_new
 
 
-
-def line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c):
+def line_search_np(x, f, g, x_new, f_new, g_new, obj):
     """Backtracking line search for quadratic objective
     """
     t = 1.0
@@ -114,10 +124,8 @@ def line_search_quad_obj_np(x, f, g, x_new, f_new, g_new, Q, c):
             break
         # update
         np.copyto(x_new, (1.0-t)*x + t*x_new)
-        np.copyto(g_new, Q.dot(x_new) + c)
-        f_new = .5 * x_new.T.dot(g_new + c)
+        f_new = obj(x_new, g_new)
         upper_line = f + suffDec * g.dot(x_new - x)
-
     return f_new
 
 
@@ -162,3 +170,45 @@ def normalization(x, block_starts, block_ends):
     for start, end in zip(block_starts, block_ends):
         np.copyto(x[start:end], x[start:end] / np.sum(x[start:end]))
 
+
+def get_solver_parts(data, min_eig, in_z=False, is_sparse=False):
+    """Returns the step_size, proj, line_search, and obj functions
+    for the least squares problem
+
+    Parameters
+    ----------
+    data: data=(Q,c) if not sparse, data=(A, b) is sparse
+    min_eig: minimum eigenvalue of Q = A.T.dot(A)
+    in_z: if variable expressed in z or not
+    is_sparse: if we consider general QP of sparse least-squares
+    """
+    if is_sparse:
+        A, b = data
+        A_sparse = sps.csr_matrix(A)
+        A_sparse_T = sps.csr_matrix(A.T)
+        n = A.shape[1]
+        def obj(x, g=None):
+            return sparse_least_squares_obj(x, A_sparse_T, A_sparse, b, g)
+    else:
+        Q, c = data
+        n = Q.shape[0]
+        def obj(x, g=None):
+            return quad_obj_np(x, Q, c, g)
+
+    def step_size(i):
+        return decreasing_step_size(i, 1.0, min_eig)
+
+    if in_z:
+        def proj(x):
+            isotonic_regression_c(x, 0, n)
+            np.maximum(0.,x,x)
+            np.minimum(1.,x,x)
+    else:
+        def proj(x):
+            proj_simplex_c(x, 0, n)
+
+
+    def line_search(x, f, g, x_new, f_new, g_new, i):
+        return line_search_np(x, f, g, x_new, f_new, g_new, obj)
+
+    return step_size, proj, line_search, obj

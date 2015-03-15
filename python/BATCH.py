@@ -1,6 +1,6 @@
 import numpy as np
 import time
-from algorithm_utils import stopping, decreasing_step_size
+from algorithm_utils import stopping, normalization
 from collections import deque
 
 
@@ -28,31 +28,28 @@ def solve(obj, proj, step_size, x_init, line_search=None, f_min=None, opt_tol=1e
     f_old = np.inf
     i = 1
     f = obj(x, g) # should update content of g
+    progress = []
+    start_time = time.time()
     while True:
         flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)
         if flag is True: break
         # update and project x
         t = step_size(i)
         np.add(x, -t*g, x_new) # should update content of x_new
-        start_time = time.time()
         proj(x_new)
-        t_proj += time.time() - start_time
-        start_time = time.time()
         f_new = obj(x_new, g_new) # should update content of g_new
-        t_obj += time.time() - start_time
         # do line search between x and x_new, should update x_new, g_new
-        start_time = time.time()
         if line_search is not None:
             f_new = line_search(x, f, g, x_new, f_new, g_new, i)
-        t_line += time.time() - start_time
         # take step
         f_old = f
         f = f_new
         np.copyto(x, x_new)
         np.copyto(g, g_new)
         i += 1
+        progress.append([time.time() - start_time, f])
     return {'f': f, 'x': x, 'stop': stop, 'iterations': i, 
-            't_proj': t_proj, 't_obj': t_obj, 't_line': t_line}
+            'progress': progress}
 
 
 def solve_BB(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6, 
@@ -81,6 +78,8 @@ def solve_BB(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
     f_old = np.inf
     i = 1
     f = obj(x, g) # should update content of g
+    progress = []
+    start_time = time.time()
     while True:
         flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)
         if flag is True: break
@@ -90,16 +89,10 @@ def solve_BB(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
         else:
             t = delta_x.T.dot(delta_g) / delta_g.T.dot(delta_g)
             np.add(x, -t*g, x_new)
-        start_time = time.time()
         proj(x_new)
-        t_proj += time.time() - start_time
-        start_time = time.time()
         f_new = obj(x_new, g_new) # should update content of g_new
-        t_obj += time.time() - start_time
         # do line search between x and x_new, should update x_new, g_new
-        start_time = time.time()
         f_new = line_search(x, f, g, x_new, f_new, g_new, i)
-        t_line += time.time() - start_time
         # take step
         f_old = f
         f = f_new
@@ -108,8 +101,9 @@ def solve_BB(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
         np.copyto(x, x_new)
         np.copyto(g, g_new)
         i += 1
+        progress.append([time.time() - start_time, f])
     return {'f': f, 'x': x, 'stop': stop, 'iterations': i, 
-            't_proj': t_proj, 't_obj': t_obj, 't_line': t_line}
+            'progress': progress}
 
 
 
@@ -146,6 +140,8 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
     f_old = np.inf
     i = 1
     f = obj(x, g) # should update content of g
+    progress = []
+    start_time = time.time()
     while True:
         #print 'f =', f
         flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)
@@ -166,17 +162,11 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
             # d = -(delta_x.T.dot(delta_g) / delta_g.T.dot(delta_g)) * g
             LBFGS_helper(q_delta_g, q_delta_x, q_rho, g, d, alpha)
             np.add(x, d, x_new)
-        start_time = time.time()
         proj(x_new)
-        t_proj += time.time() - start_time
-        start_time = time.time()
         f_new = obj(x_new, g_new) # should update content of g_new
-        t_obj += time.time() - start_time
         # do line search between x and x_new, should update x_new, g_new
-        start_time = time.time()
         # CONSIDER HAVING LINE SEARCH FOR ALL ITERATIONS
         f_new = line_search(x, f, g, x_new, f_new, g_new, i)
-        t_line += time.time() - start_time
         # take step
         f_old = f
         f = f_new
@@ -185,8 +175,9 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
         np.copyto(x, x_new)
         np.copyto(g, g_new)
         i += 1
+        progress.append([time.time() - start_time, f])
     return {'f': f, 'x': x, 'stop': stop, 'iterations': i, 
-            't_proj': t_proj, 't_obj': t_obj, 't_line': t_line}
+            'progress': progress}
 
 
 def LBFGS_helper(q_delta_g, q_delta_x, q_rho, g, d, alpha):
@@ -208,11 +199,14 @@ def LBFGS_helper(q_delta_g, q_delta_x, q_rho, g, d, alpha):
     d *= -1.0
 
 
-def solve_MD(obj, proj, step_size, x_init, line_search=None, f_min=None, opt_tol=1e-6, 
-          max_iter=5000, prog_tol=1e-9):
+def solve_MD(obj, block_starts, step_size, x_init, line_search=None, f_min=None, opt_tol=1e-6, 
+          max_iter=1000, prog_tol=1e-9):
     """mirror descent algorithm
     """
     n = x_init.shape[0]
+    block_ends = np.append(block_starts[1:], [n])
+    def normalize(x):
+        normalization(x, block_starts, block_ends)
     x = x_init
     g = np.zeros(n)
     g_new = np.zeros(n)
@@ -220,14 +214,15 @@ def solve_MD(obj, proj, step_size, x_init, line_search=None, f_min=None, opt_tol
     f_old = np.inf
     i = 1
     f = obj(x, g) # should update content of g
+    progress = []
+    start_time = time.time()
     while True:
         flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)
         if flag is True: break
         # update x
         t = step_size(i)
         np.copyto(x_new, x * np.exp(-t*g))
-        # for mirror descent with KL divergence, proj is a normalization
-        proj(x_new)
+        normalize(x_new)
         f_new = obj(x_new, g_new)
         # take step
         f_old = f
@@ -235,5 +230,7 @@ def solve_MD(obj, proj, step_size, x_init, line_search=None, f_min=None, opt_tol
         np.copyto(x, x_new)
         np.copyto(g, g_new)
         i += 1
-    return {'f': f, 'x': x, 'stop': stop, 'iterations': i}
+        progress.append([time.time() - start_time, f])
+    return {'f': f, 'x': x, 'stop': stop, 'iterations': i,
+            'progress': progress}
 

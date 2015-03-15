@@ -3,6 +3,7 @@ import unittest
 import time
 import numpy as np
 import sys
+import cvxopt as copt
 
 from openopt import QP
 sys.path.append('../../../')
@@ -95,10 +96,10 @@ class TestStressBatch(unittest.TestCase):
             m = 1.5*n # number of measurements
             Q, c, x_true, f_min, min_eig = random_least_squares(m, n, 0.5)
             print 'condition number in x', min_eig / np.linalg.eig(Q)[0][1]
-            G = copt.spdiag([-1.0]*n)
-            h = copt.matrix([1.]*n, (n,1))
-            U = copt.matrix([1.]*n, (1,n))
-            f = copt.matrix(1.0)
+            G = np.diag([-1.0]*n)
+            h = [1.]*n
+            U = [1.]*n
+            f = np.matrix(1.0)
 
             block_starts = np.array([0])
             num_blocks = len(block_starts)

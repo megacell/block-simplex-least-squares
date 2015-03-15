@@ -9,11 +9,26 @@ x2 - x3 = 25.5                           (4)
 x1 <= 15                                  (5)
 """
 
+import unittest
+import pdb
+
+import numpy as np
 from numpy import diag, matrix, inf
 from openopt import QP
-p = QP(diag([1, 2, 3]), [15, 8, 80], A = matrix('1 2 3; 8 15 80'), b = [150, 800], Aeq = [0, 1, -1], beq = 25.5, ub = [15,inf,inf])
-# or p = QP(H=diag([1,2,3]), f=[15,8,80], A= ...)
-r = p._solve('cvxopt_qp', iprint = 0)
-f_opt, x_opt = r.ff, r.xf
-# x_opt = array([-15. ,  -2.5, -28. ])
-# f_opt = -1190.25
+
+class TestCplex(unittest.TestCase):
+    def test_cplex(self):
+        p = QP(diag([1, 2, 3]),
+               [15, 8, 80],
+               A = matrix('1 2 3; 8 15 80'),
+               b = [150, 800],
+               Aeq = [0, 1, -1],
+               beq = 25.5,
+               ub = [15,inf,inf])
+        r = p._solve('cplex', iprint = 0)
+        f_opt, x_opt = r.ff, r.xf
+        np.testing.assert_almost_equal(f_opt,  -1190.35)
+        np.testing.assert_almost_equal(x_opt, [-15. ,  -2.3, -27.8 ])
+
+if __name__ == '__main__':
+    unittest.main()

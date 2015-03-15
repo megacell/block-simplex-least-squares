@@ -2,11 +2,12 @@ import pandas as pd
 import unittest
 import time
 import numpy as np
-import cvxopt as copt
 import sys
+
+from openopt import QP
 sys.path.append('../../../')
 from python.c_extensions.c_extensions import (proj_simplex_c,
-                                       quad_obj_c, 
+                                       quad_obj_c,
                                        line_search_quad_obj_c,
                                        isotonic_regression_c)
 from python.algorithm_utils import (quad_obj_np,
@@ -23,13 +24,14 @@ from python.bsls_utils import (almost_equal,
 __author__ = 'jeromethai'
 
 class TestStressBatch(unittest.TestCase):
-  
+
 
     # def setUp(self):
     #     seed = 237423433
     #     seed = 0
     #     seed = 372983
     #     np.random.seed(seed)
+
     def test_generate_data(self):
         data = generate_data(m1 = 150)
         #print data['A'][0,:]
@@ -54,8 +56,9 @@ class TestStressBatch(unittest.TestCase):
         # test on constrainted least squares problem
         # min ||Ax-b||^2 = x'A'Ax - 2 b'Ax
         # s.t. ||x||_1 = 1, x>=0
-        copt.solvers.options['show_progress'] = False
+        #copt.solvers.options['show_progress'] = False
         times_cvxopt = []
+        times_cplex = []
         times_batch = []
         times_batch_z = []
         times_bb = []
@@ -65,6 +68,7 @@ class TestStressBatch(unittest.TestCase):
         times_md = []
 
         iters_cvxopt = []
+        iters_cplex = []
         iters_batch = []
         iters_batch_z = []
         iters_bb = []
@@ -74,6 +78,7 @@ class TestStressBatch(unittest.TestCase):
         iters_md = []
 
         precision_cvxopt = []
+        precision_cplex = []
         precision_batch = []
         precision_batch_z = []
         precision_bb = []
@@ -94,6 +99,7 @@ class TestStressBatch(unittest.TestCase):
             h = copt.matrix([1.]*n, (n,1))
             U = copt.matrix([1.]*n, (1,n))
             f = copt.matrix(1.0)
+
             block_starts = np.array([0])
             num_blocks = len(block_starts)
             step_size, proj, line_search, obj = get_solver_parts((Q, c), min_eig)
@@ -107,14 +113,19 @@ class TestStressBatch(unittest.TestCase):
 
 
             # CVXOPT
-            start_time = time.time()
-            sol = copt.solvers.qp(copt.matrix(Q), copt.matrix(c), G, h, U, f)
-            times_cvxopt.append(time.time() - start_time)
-            iters_cvxopt.append(sol['iterations'])
-            #precision_cvxopt.append(np.linalg.norm(sol['x']-x_true))
-            precision_cvxopt.append(obj(np.array(sol['x']).flatten()) - f_min)
+            #sol = copt.solvers.qp(copt.matrix(Q), copt.matrix(c), G, h, U, f)
+            problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
+            sol = problem._solve('cvxopt_qp', iprint=0)
+            times_cvxopt.append(sol.elapsed['solver_cputime'])
+            iters_cvxopt.append(sol.istop)
+            precision_cvxopt.append(np.linalg.norm(sol.xf - x_true))
 
             # CPLEX
+            problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
+            sol = problem._solve('cplex', iprint=0)
+            times_cplex.append(sol.elapsed['solver_cputime'])
+            iters_cplex.append(sol.istop)
+            precision_cplex.append(np.linalg.norm(sol.xf - x_true))
 
             # Batch gradient descent in x
             
@@ -167,7 +178,7 @@ class TestStressBatch(unittest.TestCase):
             dfs.append(self.save_progress(sol['progress'], f_min_z, 'bb_z_'+str(i), columns))
 
             # l-BFGS in x
-            
+
             x_init = np.ones(n) / n
             start_time = time.time()
             sol = batch.solve_LBFGS(obj, proj, line_search, x_init)
@@ -178,7 +189,7 @@ class TestStressBatch(unittest.TestCase):
             dfs.append(self.save_progress(sol['progress'], f_min, 'lbfgs_x_'+str(i), columns))
 
             # l-BFGS in z
-            
+
             x_init = np.ones(n) / n
             z_init = x2z(x_init, block_starts=block_starts)
             start_time = time.time()
@@ -210,6 +221,7 @@ class TestStressBatch(unittest.TestCase):
         # display results
 
         print 'times cvxopt', times_cvxopt
+        print 'times cplex', times_cplex
         print 'times batch', times_batch
         print 'times batch_z', times_batch_z
         print 'times bb', times_bb
@@ -219,6 +231,7 @@ class TestStressBatch(unittest.TestCase):
         print 'times md', times_md
 
         print 'iterations cvxopt', iters_cvxopt
+        print 'iterations cplex', iters_cplex
         print 'iterations batch', iters_batch
         print 'iterations batch_z', iters_batch_z
         print 'iterations bb', iters_bb
@@ -228,6 +241,7 @@ class TestStressBatch(unittest.TestCase):
         print 'iterations md', iters_md
 
         print 'precision cvxopt', precision_cvxopt
+        print 'precision cplex', precision_cplex
         print 'precision batch', precision_batch
         print 'precision batch_z', precision_batch_z
         print 'precision bb', precision_bb
@@ -239,4 +253,3 @@ class TestStressBatch(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    

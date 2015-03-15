@@ -483,7 +483,7 @@ def random_least_squares(m, n, sparsity=0.0):
 
 
 def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
-                  tolerance=1e-10):
+                  tolerance=1e-10, permute=True, scale=True):
     """
     A is m1 x n
     U is m2 x n
@@ -502,24 +502,27 @@ def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
     x = np.concatenate([np.random.dirichlet(alpha*np.ones(bs)) for bs in \
                         block_sizes])
     U = ssla.block_diag(*[np.ones(bs) for bs in block_sizes])
-    f = np.floor(np.random.random(m2) * 1000)  # generate block scalings
-    x = U.T.dot(f) * x  # scale x up by block
+    if scale:
+        f = np.floor(np.random.random(m2) * 1000)  # generate block scalings
+        x = U.T.dot(f) * x  # scale x up by block
+    else:
+        f = np.ones(len(U))
     b = A.dot(x)  # generate measurements
     assert la.norm(U.dot(x)-f) < tolerance, "Ux!=f"
     assert la.norm(A.dot(x)-b) < tolerance, "Ax!=b"
 
     # permute the columns of A,U, entries of x
-    reorder = np.random.permutation(n)
-    A = A[:, reorder]
-    U = U[:, reorder]
-    x = x[reorder]
-    assert la.norm(U.dot(x)-f) < tolerance, "Ux!=f after permuting"
-    assert la.norm(A.dot(x)-b) < tolerance, "Ax!=b after permuting"
+    if permute:
+        reorder = np.random.permutation(n)
+        A = A[:, reorder]
+        U = U[:, reorder]
+        x = x[reorder]
+        assert la.norm(U.dot(x)-f) < tolerance, "Ux!=f after permuting"
+        assert la.norm(A.dot(x)-b) < tolerance, "Ax!=b after permuting"
 
     block_starts = np.append([0], np.cumsum(block_sizes[:-1]))
 
-    data = { 'A': A, 'b': b, 'x_true': x, 'U': U, 'f': f, 'block_starts': block_starts }
-
+    data = { 'A': A, 'b': b, 'x_true': x, 'U': U, 'f': f, 'block_starts': block_starts, 'blocks': block_sizes}
     if fname:
         scipy.io.savemat(fname, data, oned_as='column')
     return data

@@ -91,42 +91,49 @@ class TestStressBatch(unittest.TestCase):
         dfs = []
         columns = ['time', 'f-f_min']
 
-        for i,n in enumerate([10, 100, 500]): # dimension of features
+        for i,n in enumerate([100, 500, 1000]): # dimension of features
 
             m = 1.5*n # number of measurements
-            Q, c, x_true, f_min, min_eig = random_least_squares(m, n, 0.5)
+            m2 = n/10 # number of blocks
+            block_sizes = np.random.multinomial(n-m2,np.ones(m2)/m2) + np.ones(m2)
+            assert sum(block_sizes) == n
+            block_starts = np.append([0], np.cumsum(block_sizes[:-1])).astype(int)
+            assert False not in ((block_starts[1:]-block_starts[:-1])>1)
+            #print block_starts
+            #block_starts = np.array([0])
+
+            Q, c, x_true, f_min, min_eig = random_least_squares(m, n, block_starts, 0.5)
             print 'condition number in x', min_eig / np.linalg.eig(Q)[0][1]
             G = np.diag([-1.0]*n)
             h = [1.]*n
             U = [1.]*n
             f = np.matrix(1.0)
-
-            block_starts = np.array([0])
-            # num_blocks = len(block_starts)
             step_size, proj, line_search, obj = get_solver_parts((Q, c), block_starts, min_eig)
 
             # converts into z-variable
             Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts)
+            # add regularization
+            #Qz += 1e-9 * np.diag([1.0]*Qz.shape[0])
             f_min_z = f_min - f0
             min_eig_z = np.linalg.eig(Qz)[0][-1]
             print 'condition number in z', min_eig_z / np.linalg.eig(Qz)[0][1]
             step_size_z, proj_z, line_search_z, obj_z = get_solver_parts((Qz, cz), block_starts, min_eig_z, True)
 
 
-            # CVXOPT
-            #sol = copt.solvers.qp(copt.matrix(Q), copt.matrix(c), G, h, U, f)
-            problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
-            sol = problem._solve('cvxopt_qp', iprint=0)
-            times_cvxopt.append(sol.elapsed['solver_cputime'])
-            iters_cvxopt.append(sol.istop)
-            precision_cvxopt.append(obj(sol.xf) - f_min)
+            # # CVXOPT
+            # #sol = copt.solvers.qp(copt.matrix(Q), copt.matrix(c), G, h, U, f)
+            # problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
+            # sol = problem._solve('cvxopt_qp', iprint=0)
+            # times_cvxopt.append(sol.elapsed['solver_cputime'])
+            # iters_cvxopt.append(sol.istop)
+            # precision_cvxopt.append(obj(sol.xf) - f_min)
 
-            # CPLEX
-            problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
-            sol = problem._solve('cplex', iprint=0)
-            times_cplex.append(sol.elapsed['solver_cputime'])
-            iters_cplex.append(sol.istop)
-            precision_cplex.append(obj(sol.xf) - f_min)
+            # # CPLEX
+            # problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
+            # sol = problem._solve('cplex', iprint=0)
+            # times_cplex.append(sol.elapsed['solver_cputime'])
+            # iters_cplex.append(sol.istop)
+            # precision_cplex.append(obj(sol.xf) - f_min)
 
             # Batch gradient descent in x
             

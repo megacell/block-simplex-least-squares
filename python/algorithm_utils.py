@@ -206,10 +206,11 @@ def get_solver_parts(data, block_starts, min_eig, in_z=False, is_sparse=False):
         return decreasing_step_size(i, 1.0, min_eig)
 
     if in_z:
-        for i in range(len(block_starts)):
-            block_starts[i] -= i
+        tmp = np.copy(block_starts)
+        for i in range(len(tmp)):
+            tmp[i] -= i
         def proj(x):
-            isotonic_regression_multi_c(x, block_starts)
+            isotonic_regression_multi_c(x, tmp)
             np.maximum(0.,x,x)
             np.minimum(1.,x,x)
     else:

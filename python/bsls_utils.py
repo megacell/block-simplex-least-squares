@@ -16,7 +16,7 @@ from scipy.linalg import block_diag
 import scipy.sparse as sps
 import scipy.io as sio
 
-from algorithm_utils import quad_obj_np
+from algorithm_utils import quad_obj_np, normalization
 
 # Constraints
 PROB_SIMPLEX = 'probability simplex'
@@ -209,6 +209,17 @@ def qp_to_qp_in_z(Q, c, block_starts):
     # f0 is the objective value at x=x0
     f0 = 0.5 * x0.T.dot(Q).dot(x0) + c.T.dot(x0)
     return Qz, cz, N, x0, f0
+
+
+def ls_to_ls_in_z(A, b, block_starts):
+    """Converts least squares to least squares in z
+    """
+    n = A.shape[1]
+    x0 = block_starts_to_x0(block_starts, n)
+    N = block_starts_to_N(block_starts, n)
+    Az = A.dot(N)
+    bz = b - A.dot(x0)
+    return Az, bz, N, x0
 
 
 def x2z(x, block_sizes=None, block_starts=None):
@@ -460,11 +471,12 @@ def generate_small_qp():
     return Q, c, x_true, f_min, min_eig
 
 
-def random_least_squares(m, n, sparsity=0.0):
+def random_least_squares(m, n, block_starts, sparsity=0.0):
     """
     Generate least squares from the standard normal distribution
     m = # measurements
     n = # dimension of features
+    block_starts = sizes of the blocks
     """
     assert sparsity < 1.0
     A = np.random.randn(m, n)
@@ -472,7 +484,8 @@ def random_least_squares(m, n, sparsity=0.0):
     if int(sparsity * n) > 0:
         zeros = np.random.choice(n, sparsity * n, replace=False)
         for i in zeros: x_true[i] == 0.0
-    x_true = x_true / np.linalg.norm(x_true, 1)
+    block_ends = np.append(block_starts[1:], [n])
+    normalization(x_true, block_starts, block_ends)
     b = A.dot(x_true)
     x_true = x_true.flatten()
     Q, c = construct_qp_from_least_squares(A, b)

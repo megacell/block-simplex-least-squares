@@ -7,29 +7,21 @@ import matplotlib.pyplot as plt
 if __name__ == '__main__':
     progress = pd.load('progress.pkl')
 
-    plt.plot(progress.loc['bb_x_2']['time'], progress.loc['bb_x_2']['f-f_min'], label='x')
-    plt.plot(progress.loc['bb_z_2']['time'], progress.loc['bb_z_2']['f-f_min'], label='z')
-    plt.yscale('log')
-    plt.legend(loc=0)
-    plt.show()
+    # plt.plot(progress.loc['bb_x_2']['time'], progress.loc['bb_x_2']['f-f_min'], label='x')
+    # plt.plot(progress.loc['bb_z_2']['time'], progress.loc['bb_z_2']['f-f_min'], label='z')
+    # plt.yscale('log')
+    # plt.legend(loc=0)
+    # plt.title('BB ')
+    # plt.show()
+    for algo in ['batch', 'bb', 'lbfgs']:
+        for i in range(3):
 
-    plt.plot(progress.loc['lbfgs_x_0']['time'], progress.loc['lbfgs_x_0']['f-f_min'], label='x')
-    plt.plot(progress.loc['lbfgs_z_0']['time'], progress.loc['lbfgs_z_0']['f-f_min'], label='z')
-    plt.yscale('log')
-    plt.legend(loc=0)
-    plt.show()
-
-    plt.plot(progress.loc['lbfgs_x_1']['time'], progress.loc['lbfgs_x_1']['f-f_min'], label='x')
-    plt.plot(progress.loc['lbfgs_z_1']['time'], progress.loc['lbfgs_z_1']['f-f_min'], label='z')
-    plt.yscale('log')
-    plt.legend(loc=0)
-    plt.show()
-
-    plt.plot(progress.loc['lbfgs_x_2']['time'], progress.loc['lbfgs_x_2']['f-f_min'], label='x')
-    plt.plot(progress.loc['lbfgs_z_2']['time'], progress.loc['lbfgs_z_2']['f-f_min'], label='z')
-    plt.yscale('log')
-    plt.legend(loc=0)
-    plt.show()
+            plt.plot(progress.loc[algo+'_x_'+str(i)]['time'], progress.loc[algo+'_x_'+str(i)]['f-f_min'], label='x')
+            plt.plot(progress.loc[algo+'_z_'+str(i)]['time'], progress.loc[algo+'_z_'+str(i)]['f-f_min'], label='z')
+            plt.yscale('log')
+            plt.legend(loc=0)
+            plt.title(algo+' experiment '+str(i))
+            plt.show()
 
 
     # plt.plot(index, est_lf[0], '-or', label='With OD flows')

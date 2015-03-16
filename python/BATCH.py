@@ -158,8 +158,11 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
                 q_delta_g.popleft()
                 q_delta_x.popleft()
                 q_rho.popleft()
-            # d = -(delta_x.T.dot(delta_g) / delta_g.T.dot(delta_g)) * g
-            LBFGS_helper(q_delta_g, q_delta_x, q_rho, g, d, alpha)
+            if i <= 5:
+                # d more Barzilei-Bornwein steps
+                d = -(delta_x.T.dot(delta_g) / delta_g.T.dot(delta_g)) * g
+            else:
+                LBFGS_helper(q_delta_g, q_delta_x, q_rho, g, d, alpha)
             np.add(x, d, x_new)
         proj(x_new)
         f_new = obj(x_new, g_new) # should update content of g_new

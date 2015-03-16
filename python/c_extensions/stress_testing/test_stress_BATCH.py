@@ -102,15 +102,15 @@ class TestStressBatch(unittest.TestCase):
             f = np.matrix(1.0)
 
             block_starts = np.array([0])
-            num_blocks = len(block_starts)
-            step_size, proj, line_search, obj = get_solver_parts((Q, c), min_eig)
+            # num_blocks = len(block_starts)
+            step_size, proj, line_search, obj = get_solver_parts((Q, c), block_starts, min_eig)
 
             # converts into z-variable
             Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts)
             f_min_z = f_min - f0
             min_eig_z = np.linalg.eig(Qz)[0][-1]
             print 'condition number in z', min_eig_z / np.linalg.eig(Qz)[0][1]
-            step_size_z, proj_z, line_search_z, obj_z = get_solver_parts((Qz, cz), min_eig_z, True)
+            step_size_z, proj_z, line_search_z, obj_z = get_solver_parts((Qz, cz), block_starts, min_eig_z, True)
 
 
             # CVXOPT
@@ -119,14 +119,14 @@ class TestStressBatch(unittest.TestCase):
             sol = problem._solve('cvxopt_qp', iprint=0)
             times_cvxopt.append(sol.elapsed['solver_cputime'])
             iters_cvxopt.append(sol.istop)
-            precision_cvxopt.append(np.linalg.norm(sol.xf - x_true))
+            precision_cvxopt.append(obj(sol.xf) - f_min)
 
             # CPLEX
             problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
             sol = problem._solve('cplex', iprint=0)
             times_cplex.append(sol.elapsed['solver_cputime'])
             iters_cplex.append(sol.istop)
-            precision_cplex.append(np.linalg.norm(sol.xf - x_true))
+            precision_cplex.append(obj(sol.xf) - f_min)
 
             # Batch gradient descent in x
             

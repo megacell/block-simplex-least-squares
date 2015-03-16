@@ -53,7 +53,7 @@ class TestStressQuadObj(unittest.TestCase):
         times_dense = []
         times_sparse = []
         for n in [20, 200, 2000]:
-            m1 = n/4
+            m1 = n/2
             A_sparse = 0.9
             data = generate_data(n=n, m1=m1, A_sparse=A_sparse)
             A, b, x_true = data['A'], data['b'], data['x_true']

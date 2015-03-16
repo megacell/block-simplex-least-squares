@@ -1,5 +1,6 @@
 
-from python.c_extensions.c_extensions import proj_simplex_c, isotonic_regression_c
+from python.c_extensions.c_extensions import (proj_multi_simplex_c,  
+                                              isotonic_regression_multi_c)
 import numpy as np
 import scipy.sparse as sps
 
@@ -171,13 +172,14 @@ def normalization(x, block_starts, block_ends):
         np.copyto(x[start:end], x[start:end] / np.sum(x[start:end]))
 
 
-def get_solver_parts(data, min_eig, in_z=False, is_sparse=False):
+def get_solver_parts(data, block_starts, min_eig, in_z=False, is_sparse=False):
     """Returns the step_size, proj, line_search, and obj functions
     for the least squares problem
 
     Parameters
     ----------
     data: data=(Q,c) if not sparse, data=(A, b) is sparse
+    block_starts: first indices of each block
     min_eig: minimum eigenvalue of Q = A.T.dot(A)
     in_z: if variable expressed in z or not
     is_sparse: if we consider general QP of sparse least-squares
@@ -199,13 +201,15 @@ def get_solver_parts(data, min_eig, in_z=False, is_sparse=False):
         return decreasing_step_size(i, 1.0, min_eig)
 
     if in_z:
+        for i in range(len(block_starts)):
+            block_starts[i] -= i
         def proj(x):
-            isotonic_regression_c(x, 0, n)
+            isotonic_regression_multi_c(x, block_starts)
             np.maximum(0.,x,x)
             np.minimum(1.,x,x)
     else:
         def proj(x):
-            proj_simplex_c(x, 0, n)
+            proj_multi_simplex_c(x, block_starts)
 
 
     def line_search(x, f, g, x_new, f_new, g_new, i):

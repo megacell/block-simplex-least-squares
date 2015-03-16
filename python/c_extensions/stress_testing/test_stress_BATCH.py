@@ -33,16 +33,16 @@ class TestStressBatch(unittest.TestCase):
     #     seed = 372983
     #     np.random.seed(seed)
 
-    def test_generate_data(self):
-        data = generate_data(m1 = 150)
-        #print data['A'][0,:]
-        Q, c = construct_qp_from_least_squares(data['A'], data['b'])
-        #print Q
-        #Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts)
-        print np.linalg.eig(Q)[0][-1]/np.linalg.eig(Q)[0][1]
-        block_starts = data['block_starts'].astype(int)
-        Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts)
-        print np.linalg.eig(Qz)[0][-1]/np.linalg.eig(Qz)[0][1]
+    # def test_generate_data(self):
+    #     data = generate_data(m1 = 150)
+    #     #print data['A'][0,:]
+    #     Q, c = construct_qp_from_least_squares(data['A'], data['b'])
+    #     #print Q
+    #     #Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts)
+    #     print np.linalg.eig(Q)[0][-1]/np.linalg.eig(Q)[0][1]
+    #     block_starts = data['block_starts'].astype(int)
+    #     Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts)
+    #     print np.linalg.eig(Qz)[0][-1]/np.linalg.eig(Qz)[0][1]
 
 
     def save_progress(self, progress, f_min, name, columns):
@@ -91,7 +91,7 @@ class TestStressBatch(unittest.TestCase):
         dfs = []
         columns = ['time', 'f-f_min']
 
-        for i,n in enumerate([10, 100, 1000]): # dimension of features
+        for i,n in enumerate([10, 100, 500]): # dimension of features
 
             m = 1.5*n # number of measurements
             Q, c, x_true, f_min, min_eig = random_least_squares(m, n, 0.5)
@@ -186,6 +186,7 @@ class TestStressBatch(unittest.TestCase):
             times_lbfgs.append(time.time() - start_time)
             #precision_lbfgs.append(np.linalg.norm(sol['x']-x_true))
             precision_lbfgs.append(obj(sol['x']) - f_min)
+            stop_lbfgs_x = sol['stop']
             iters_lbfgs.append(sol['iterations'])
             dfs.append(self.save_progress(sol['progress'], f_min, 'lbfgs_x_'+str(i), columns))
 
@@ -200,6 +201,7 @@ class TestStressBatch(unittest.TestCase):
             #x_final = N.dot(sol['x']) + x0
             #precision_lbfgs_z.append(np.linalg.norm(x_final-x_true))
             precision_lbfgs_z.append(obj_z(sol['x']) - f_min_z)
+            stop_lbfgs_z = sol['stop']
             iters_lbfgs_z.append(sol['iterations'])
             dfs.append(self.save_progress(sol['progress'], f_min_z, 'lbfgs_z_'+str(i), columns))
 
@@ -250,6 +252,11 @@ class TestStressBatch(unittest.TestCase):
         print 'precision lbfgs', precision_lbfgs
         print 'precision lbfgs_z', precision_lbfgs_z
         print 'precision md', precision_md
+
+        print stop_lbfgs_x
+        print stop_lbfgs_z
+
+
 
 
 if __name__ == '__main__':

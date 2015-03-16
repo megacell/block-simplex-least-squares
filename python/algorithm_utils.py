@@ -110,14 +110,19 @@ def decreasing_step_size(i, t0, alpha):
 def line_search_np(x, f, g, x_new, f_new, g_new, obj):
     """Backtracking line search for quadratic objective
     """
+    #print 'doing line_search'
     t = 1.0
+    #suffDec = 1e-4
     suffDec = 1e-4
-    progTol = 1e-8
+    progTol = 1e-12
     upper_line = f + suffDec * g.dot(x_new - x)
     while f_new > upper_line:
-        t *= .5
+        #print 'Smaller step size'
+        t *= .8
         # Check whether step has become too small
-        if np.linalg.norm(x_new - x, np.inf)  < progTol:
+        step = np.linalg.norm(x_new - x, np.inf)
+        if step  < progTol:
+            #print 'Step {} too small in line search'.format(step)
             t = 0.0
             f_new = f
             np.copyto(g_new, g)
@@ -188,12 +193,12 @@ def get_solver_parts(data, block_starts, min_eig, in_z=False, is_sparse=False):
         A, b = data
         A_sparse = sps.csr_matrix(A)
         A_sparse_T = sps.csr_matrix(A.T)
-        n = A.shape[1]
+        #n = A.shape[1]
         def obj(x, g=None):
             return sparse_least_squares_obj(x, A_sparse_T, A_sparse, b, g)
     else:
         Q, c = data
-        n = Q.shape[0]
+        #n = Q.shape[0]
         def obj(x, g=None):
             return quad_obj_np(x, Q, c, g)
 

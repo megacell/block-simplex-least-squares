@@ -108,7 +108,7 @@ def solve_BB(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
 
 
 def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6, 
-          max_iter=1000, prog_tol=1e-9, corrections=50):
+          max_iter=1000, prog_tol=1e-12, corrections=50):
     """Projected batch gradient descent with Barzilei-Bornwein step 
     obj: f,g = obj(x) with f the objective value and g the gradient at x
     proj: w = proj(x)
@@ -122,8 +122,6 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
     q_delta_g = deque()
     q_delta_x = deque()
     q_rho = deque()
-    # d.append('j') append new entry to the right side
-    # d.popleft() return and remove the leftmost item
     t_proj = 0.
     t_obj = 0.
     t_line = 0.
@@ -143,7 +141,8 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
     progress = []
     start_time = time.time()
     while True:
-        #print 'f =', f
+        #print 'objective in LBFGS:', f
+        #print 'norm of gradient in LBFGS', np.linalg.norm(g)
         flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)
         if flag is True: break
         # update and project x
@@ -183,7 +182,8 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
 def LBFGS_helper(q_delta_g, q_delta_x, q_rho, g, d, alpha):
     m = len(q_delta_g)
     np.copyto(d, g)
-    for j in range(2,m+1):
+    #for j in range(2,m+1):
+    for j in range(1,m+1):
         alpha[-j] = q_rho[-j] * q_delta_x[-j].T.dot(d)
         d -= alpha[-j] * q_delta_g[-j]
 
@@ -191,7 +191,8 @@ def LBFGS_helper(q_delta_g, q_delta_x, q_rho, g, d, alpha):
     #print 't = ', t
     d *= t
 
-    for j in range(m-1):
+    #for j in range(m-1):
+    for j in range(m):
         beta = q_rho[j] * q_delta_g[j].T.dot(d)
         d += q_delta_x[j] * (alpha[-m+j] - beta)
     #print '||d|| =', np.linalg.norm(d)

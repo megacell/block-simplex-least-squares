@@ -3,7 +3,7 @@ from python.c_extensions.c_extensions import (proj_multi_simplex_c,
                                               isotonic_regression_multi_c)
 import numpy as np
 import scipy.sparse as sps
-
+import pandas as pd
 
 __author__ = 'jeromethai'
 
@@ -222,3 +222,20 @@ def get_solver_parts(data, block_starts, min_eig, in_z=False, is_sparse=False):
         return line_search_np(x, f, g, x_new, f_new, g_new, obj)
 
     return step_size, proj, line_search, obj
+
+
+def save_progress(progress, f_min, name):
+    """Save progress in a pandas database
+
+    Parameters
+    ----------
+    progress: progress output by the solvers in BATCH.py
+    f_min: minimum objective value
+    name: name of the experiment
+    """
+    columns = ['time', 'f-f_min']
+    iters = len(progress)
+    index = pd.MultiIndex.from_tuples(zip([name]*iters, range(iters)))
+    for i in range(len(progress)): progress[i][1] -= f_min
+    df = pd.DataFrame(progress, index = index, columns = columns)
+    return df

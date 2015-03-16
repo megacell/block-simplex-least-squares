@@ -13,44 +13,22 @@ from python.c_extensions.c_extensions import (proj_simplex_c,
                                        isotonic_regression_c)
 from python.algorithm_utils import (quad_obj_np,
                                     decreasing_step_size,
-                                    get_solver_parts)
+                                    get_solver_parts,
+                                    save_progress)
 import python.BATCH as batch
-from python.bsls_utils import (almost_equal, 
-                                x2z, 
+from python.bsls_utils import (x2z, 
                                 qp_to_qp_in_z,
-                                random_least_squares,
-                                generate_data,
-                                construct_qp_from_least_squares)
+                                random_least_squares)
 
 __author__ = 'jeromethai'
 
 class TestStressBatch(unittest.TestCase):
-
 
     # def setUp(self):
     #     seed = 237423433
     #     seed = 0
     #     seed = 372983
     #     np.random.seed(seed)
-
-    # def test_generate_data(self):
-    #     data = generate_data(m1 = 150)
-    #     #print data['A'][0,:]
-    #     Q, c = construct_qp_from_least_squares(data['A'], data['b'])
-    #     #print Q
-    #     #Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts)
-    #     print np.linalg.eig(Q)[0][-1]/np.linalg.eig(Q)[0][1]
-    #     block_starts = data['block_starts'].astype(int)
-    #     Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts)
-    #     print np.linalg.eig(Qz)[0][-1]/np.linalg.eig(Qz)[0][1]
-
-
-    def save_progress(self, progress, f_min, name, columns):
-        iters = len(progress)
-        index = pd.MultiIndex.from_tuples(zip([name]*iters, range(iters)))
-        for i in range(len(progress)): progress[i][1] -= f_min
-        df = pd.DataFrame(progress, index = index, columns = columns)
-        return df
 
 
     def test_batch(self):
@@ -88,13 +66,13 @@ class TestStressBatch(unittest.TestCase):
         precision_lbfgs_z = []
         precision_md = []
 
+        # initialize database
         dfs = []
-        columns = ['time', 'f-f_min']
 
         for i,n in enumerate([100, 500, 1000]): # dimension of features
 
             m = 1.5*n # number of measurements
-            m2 = n/10 # number of blocks
+            m2 = n/20 # number of blocks
             block_sizes = np.random.multinomial(n-m2,np.ones(m2)/m2) + np.ones(m2)
             assert sum(block_sizes) == n
             block_starts = np.append([0], np.cumsum(block_sizes[:-1])).astype(int)
@@ -102,7 +80,7 @@ class TestStressBatch(unittest.TestCase):
             #print block_starts
             #block_starts = np.array([0])
 
-            Q, c, x_true, f_min, min_eig = random_least_squares(m, n, block_starts, 0.5)
+            Q, c, x_true, f_min, min_eig = random_least_squares(m, n, block_starts, 0.5, True)
             print 'condition number in x', min_eig / np.linalg.eig(Q)[0][1]
             G = np.diag([-1.0]*n)
             h = [1.]*n
@@ -145,7 +123,7 @@ class TestStressBatch(unittest.TestCase):
             #precision_batch.append(np.linalg.norm(sol['x']-x_true))
             precision_batch.append(obj(sol['x']) - f_min)
             iters_batch.append(sol['iterations'])
-            dfs.append(self.save_progress(sol['progress'], f_min, 'batch_x_'+str(i), columns))
+            dfs.append(save_progress(sol['progress'], f_min, 'batch_x_'+str(i)))
 
             # Batch gradient descent in z
 
@@ -158,7 +136,7 @@ class TestStressBatch(unittest.TestCase):
             #precision_batch_z.append(np.linalg.norm(x_final-x_true))
             precision_batch_z.append(obj_z(sol['x']) - f_min_z)
             iters_batch_z.append(sol['iterations'])
-            dfs.append(self.save_progress(sol['progress'], f_min_z, 'batch_z_'+str(i), columns))
+            dfs.append(save_progress(sol['progress'], f_min_z, 'batch_z_'+str(i)))
 
             # gradient descent with BB step in x
 
@@ -170,7 +148,7 @@ class TestStressBatch(unittest.TestCase):
             #precision_batch.append(np.linalg.norm(sol['x']-x_true))
             precision_bb.append(obj(sol['x']) - f_min)
             iters_bb.append(sol['iterations'])
-            dfs.append(self.save_progress(sol['progress'], f_min, 'bb_x_'+str(i), columns))
+            dfs.append(save_progress(sol['progress'], f_min, 'bb_x_'+str(i)))
 
             # gradient descent with BB step in z
 
@@ -183,7 +161,7 @@ class TestStressBatch(unittest.TestCase):
             #precision_batch_z.append(np.linalg.norm(x_final-x_true))
             precision_bb_z.append(obj_z(sol['x']) - f_min_z)
             iters_bb_z.append(sol['iterations'])
-            dfs.append(self.save_progress(sol['progress'], f_min_z, 'bb_z_'+str(i), columns))
+            dfs.append(save_progress(sol['progress'], f_min_z, 'bb_z_'+str(i)))
 
             # l-BFGS in x
 
@@ -195,7 +173,7 @@ class TestStressBatch(unittest.TestCase):
             precision_lbfgs.append(obj(sol['x']) - f_min)
             stop_lbfgs_x = sol['stop']
             iters_lbfgs.append(sol['iterations'])
-            dfs.append(self.save_progress(sol['progress'], f_min, 'lbfgs_x_'+str(i), columns))
+            dfs.append(save_progress(sol['progress'], f_min, 'lbfgs_x_'+str(i)))
 
             # l-BFGS in z
 
@@ -210,7 +188,7 @@ class TestStressBatch(unittest.TestCase):
             precision_lbfgs_z.append(obj_z(sol['x']) - f_min_z)
             stop_lbfgs_z = sol['stop']
             iters_lbfgs_z.append(sol['iterations'])
-            dfs.append(self.save_progress(sol['progress'], f_min_z, 'lbfgs_z_'+str(i), columns))
+            dfs.append(save_progress(sol['progress'], f_min_z, 'lbfgs_z_'+str(i)))
 
             # mirror descent
 
@@ -223,7 +201,7 @@ class TestStressBatch(unittest.TestCase):
             #precision_batch.append(np.linalg.norm(sol['x']-x_true))
             precision_md.append(obj(sol['x']) - f_min)
             iters_md.append(sol['iterations'])
-            dfs.append(self.save_progress(sol['progress'], f_min, 'md_x_'+str(i), columns))
+            dfs.append(save_progress(sol['progress'], f_min, 'md_x_'+str(i)))
 
         progress = pd.concat(dfs)
         progress.save('progress.pkl')

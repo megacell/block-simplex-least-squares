@@ -161,6 +161,7 @@ def block_sizes_to_N(block_sizes):
 
 def block_starts_to_N(block_starts, n):
     """Convert a list of the block_starts to numpy array N
+    n is dimentionality of x
     """
     block_sizes = np.append(block_starts[1:], [n]) - block_starts
     m = np.sum(block_sizes)
@@ -179,6 +180,46 @@ def block_starts_to_N(block_starts, n):
         start_row += block_size
         start_col += block_size - 1
     return N
+
+
+def block_starts_to_M(block_starts, n):
+    """Convert a list of the block_starts to numpy array M
+    Be careful!
+    n is the dimenionality of x
+    block_starts is in the x variable
+    """
+    block_sizes = np.append(block_starts[1:], [n]) - block_starts
+    m = n - block_sizes.shape[0]
+    M = np.zeros((m,m))
+    ind = 0
+    for i, block_size in enumerate(block_sizes):
+        for j in xrange(block_size-1):
+            for k in xrange(j+1):
+                M[ind+j, ind+k] = 1.0
+        ind += block_size - 1
+    return M
+
+
+def block_starts_to_M2(block_starts, n):
+    """Generates a change of variable matrix from z to x that
+    preserves dimension, i.e. 
+    z1 = x1
+    z2 = x1 + x2
+     ... 
+    z(n-1) = x1 + ... + x(n-1)
+    zn = xn
+    """
+    block_sizes = np.append(block_starts[1:], [n]) - block_starts
+    M = np.zeros((n,n))
+    ind = 0
+    for i, block_size in enumerate(block_sizes):
+        for j in xrange(block_size-1):
+            for k in xrange(j+1):
+                M[ind+j, ind+k] = 1.0
+        ind += block_size - 1
+        M[ind, ind] = 1.0
+        ind += 1
+    return M
 
 
 def Q_to_Q_in_z(Q, block_starts):
@@ -471,15 +512,19 @@ def generate_small_qp():
     return Q, c, x_true, f_min, min_eig
 
 
-def random_least_squares(m, n, block_starts, sparsity=0.0):
+def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False):
     """
     Generate least squares from the standard normal distribution
-    m = # measurements
-    n = # dimension of features
-    block_starts = sizes of the blocks
+    m: # measurements
+    n: # dimension of features
+    block_starts: sizes of the blocks
+    in_z: if true, generate the normal distribution in z
     """
     assert sparsity < 1.0
     A = np.random.randn(m, n)
+    if in_z:
+        M = block_starts_to_M2(block_starts, n)
+        A = A.dot(M)
     x_true = abs(np.random.randn(n,1))
     if int(sparsity * n) > 0:
         zeros = np.random.choice(n, sparsity * n, replace=False)
@@ -493,6 +538,7 @@ def random_least_squares(m, n, block_starts, sparsity=0.0):
     f_min = quad_obj_np(x_true, Q, c)
     min_eig = w[-1]
     return Q, c, x_true, f_min, min_eig
+
 
 
 def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,

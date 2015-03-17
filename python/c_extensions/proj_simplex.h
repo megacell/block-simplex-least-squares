@@ -52,22 +52,25 @@ void proj_multi_ball(double *y, int *blocks, int numblocks, int n) {
 Do multiple projections where blocks is an array of integers that
 constains the first index of each block and n the length of the array
 */ 
-int flag;
 double sum;
     for (int i=0; i < numblocks-1; i++) {
         sum = 0.0;
-        flag = 0;
         for (int j=blocks[i]; j < blocks[i+1]; j++) {
-            if (y[j] < 0.0) {
-                flag = 1;
-                break;
-            }
-            sum += y[j];
+            if (y[j] < 0.0) 
+                y[j] = 0.0;
+            else
+                sum += y[j];
         }
-        if (flag == 0 && sum > 1.0) flag = 1;
-        if (flag == 1) proj_simplex(y, blocks[i], blocks[i+1]);
+        if (sum > 1.0) proj_simplex(y, blocks[i], blocks[i+1]);
     }
-    proj_simplex(y, blocks[numblocks-1], n);
+    sum = 0.0;
+    for (int j=blocks[numblocks-1]; j < n; j++) {
+        if (y[j] < 0.0)
+            y[j] = 0.0;
+        else
+            sum += y[j];
+    }
+    if (sum > 1.0) proj_simplex(y, blocks[numblocks-1], n);
 }
 
 

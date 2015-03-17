@@ -7,10 +7,6 @@ import cvxopt as copt
 
 from openopt import QP
 sys.path.append('../../../')
-from python.c_extensions.c_extensions import (proj_simplex_c,
-                                       quad_obj_c,
-                                       line_search_quad_obj_c,
-                                       isotonic_regression_c)
 from python.algorithm_utils import (quad_obj_np,
                                     decreasing_step_size,
                                     get_solver_parts,
@@ -18,7 +14,12 @@ from python.algorithm_utils import (quad_obj_np,
 import python.BATCH as batch
 from python.bsls_utils import (x2z, 
                                 qp_to_qp_in_z,
-                                random_least_squares)
+                                random_least_squares,
+                                normalization)
+
+
+import ipdb
+
 
 __author__ = 'jeromethai'
 
@@ -70,7 +71,10 @@ class TestStressBatch(unittest.TestCase):
         dfs = []
 
         # generate a least squares well-conditioned in z
-        in_z = False
+        in_z = True
+
+        # if lasso, feasible set is the l1-ball
+        lasso = True
 
         for i,n in enumerate([100, 500, 1000]): # dimension of features
 
@@ -79,26 +83,31 @@ class TestStressBatch(unittest.TestCase):
             block_sizes = np.random.multinomial(n-m2,np.ones(m2)/m2) + np.ones(m2)
             assert sum(block_sizes) == n
             block_starts = np.append([0], np.cumsum(block_sizes[:-1])).astype(int)
-            assert False not in ((block_starts[1:]-block_starts[:-1])>1)
+            block_ends = np.append(block_starts[1:], [n])
+            assert False not in ((block_ends-block_starts)>1)
             #print block_starts
             #block_starts = np.array([0])
 
-            Q, c, x_true, f_min, min_eig = random_least_squares(m, n, block_starts, 0.5, in_z=in_z)
+            Q, c, x_true, f_min, min_eig = random_least_squares(m, n, 
+                    block_starts, 0.5, in_z=in_z, lasso=lasso)
             print 'condition number in x', min_eig / np.linalg.eig(Q)[0][1]
             G = np.diag([-1.0]*n)
             h = [1.]*n
             U = [1.]*n
             f = np.matrix(1.0)
-            step_size, proj, line_search, obj = get_solver_parts((Q, c), block_starts, min_eig)
+            step_size, proj, line_search, obj = get_solver_parts((Q, c), 
+                    block_starts, min_eig, lasso=lasso)
 
             # converts into z-variable
-            Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts)
+            Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts, lasso=lasso)
             # add regularization
             #Qz += 1e-9 * np.diag([1.0]*Qz.shape[0])
             f_min_z = f_min - f0
+            #ipdb.set_trace()
             min_eig_z = np.linalg.eig(Qz)[0][-1]
             print 'condition number in z', min_eig_z / np.linalg.eig(Qz)[0][1]
-            step_size_z, proj_z, line_search_z, obj_z = get_solver_parts((Qz, cz), block_starts, min_eig_z, True)
+            step_size_z, proj_z, line_search_z, obj_z = get_solver_parts((Qz, cz), 
+                    block_starts, min_eig_z, True, lasso=lasso)
 
 
             # # CVXOPT
@@ -118,7 +127,8 @@ class TestStressBatch(unittest.TestCase):
 
             # Batch gradient descent in x
             
-            x_init = np.ones(n) / n
+            x_init = np.ones(n)
+            normalization(x_init, block_starts, block_ends)
             start_time = time.time()
             #sol = batch.solve(obj_np, proj, line_search, x_init)
             sol = batch.solve(obj, proj, step_size, x_init, line_search)
@@ -130,8 +140,9 @@ class TestStressBatch(unittest.TestCase):
 
             # Batch gradient descent in z
 
-            x_init = np.ones(n) / n
-            z_init = x2z(x_init, block_starts=block_starts)
+            x_init = np.ones(n)
+            normalization(x_init, block_starts, block_ends)
+            z_init = x2z(x_init, block_starts=block_starts, lasso=lasso)
             start_time = time.time()
             sol = batch.solve(obj_z, proj_z, step_size_z, z_init, line_search_z)
             times_batch_z.append(time.time() - start_time)
@@ -143,7 +154,8 @@ class TestStressBatch(unittest.TestCase):
 
             # gradient descent with BB step in x
 
-            x_init = np.ones(n) / n
+            x_init = np.ones(n)
+            normalization(x_init, block_starts, block_ends)
             start_time = time.time()
             #sol = batch.solve(obj_np, proj, line_search, x_init)
             sol = batch.solve_BB(obj, proj, line_search, x_init)
@@ -155,8 +167,9 @@ class TestStressBatch(unittest.TestCase):
 
             # gradient descent with BB step in z
 
-            x_init = np.ones(n) / n
-            z_init = x2z(x_init, block_starts=block_starts)
+            x_init = np.ones(n)
+            normalization(x_init, block_starts, block_ends)
+            z_init = x2z(x_init, block_starts=block_starts, lasso=lasso)
             start_time = time.time()
             sol = batch.solve_BB(obj_z, proj_z, line_search_z, z_init)
             times_bb_z.append(time.time() - start_time)
@@ -168,7 +181,8 @@ class TestStressBatch(unittest.TestCase):
 
             # l-BFGS in x
 
-            x_init = np.ones(n) / n
+            x_init = np.ones(n)
+            normalization(x_init, block_starts, block_ends)
             start_time = time.time()
             sol = batch.solve_LBFGS(obj, proj, line_search, x_init)
             times_lbfgs.append(time.time() - start_time)
@@ -180,8 +194,9 @@ class TestStressBatch(unittest.TestCase):
 
             # l-BFGS in z
 
-            x_init = np.ones(n) / n
-            z_init = x2z(x_init, block_starts=block_starts)
+            x_init = np.ones(n)
+            normalization(x_init, block_starts, block_ends)
+            z_init = x2z(x_init, block_starts=block_starts, lasso=lasso)
             start_time = time.time()
             #sol = batch.solve(obj_npz, projz, line_searchz, z_init)
             sol = batch.solve_LBFGS(obj_z, proj_z, line_search_z, z_init)

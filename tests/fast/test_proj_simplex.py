@@ -2,7 +2,9 @@ import unittest
 import sys
 
 sys.path.append('../../')
-from python.c_extensions.c_extensions import proj_simplex_c, proj_multi_simplex_c
+from python.c_extensions.c_extensions import (proj_simplex_c, 
+                                            proj_multi_simplex_c,
+                                            proj_multi_ball_c)
 from python.algorithm_utils import proj_simplex, proj_multi_simplex
 
 import numpy as np
@@ -70,6 +72,13 @@ class TestProjSimplex(unittest.TestCase):
 
     def test_proj_multi_simplex(self):
         self.run_tests_multiple_block_with(proj_multi_simplex)
+
+
+    def test_proj_multi_ball_c(self):
+        y = np.array([0.234, 0.5, 1.3, -1.234, 1.7, -1.0, 53.])
+        block_starts = np.array([0,2,4])
+        proj_multi_ball_c(y, block_starts)
+        self.compare_arrays(y, [0.234, 0.5, 1., 0., 0., 0., 1.])
 
 
     def compare_arrays(self, array1, array2):

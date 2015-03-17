@@ -16,6 +16,8 @@ from scipy.linalg import block_diag
 import scipy.sparse as sps
 import scipy.io as sio
 
+import ipdb
+
 from algorithm_utils import quad_obj_np, normalization
 
 # Constraints
@@ -537,7 +539,7 @@ def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False,
     x_true = abs(np.random.randn(n,1))
     if int(sparsity * n) > 0:
         zeros = np.random.choice(n, sparsity * n, replace=False)
-        for i in zeros: x_true[i] == 0.0
+        for i in zeros: x_true[i] = 0.0
     block_ends = np.append(block_starts[1:], [n])
     normalization(x_true, block_starts, block_ends)
 
@@ -546,8 +548,7 @@ def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False,
         for start, end in zip(block_starts, block_ends):
             if np.random.uniform() > 0.7:
                 alpha = np.random.uniform(0.5, 1)
-                np.copyto(x[start:end], x[start:end] * alpha)
-
+                np.copyto(x_true[start:end], x_true[start:end] * alpha)
     # construct b, Q, c
     b = A.dot(x_true)
     x_true = x_true.flatten()

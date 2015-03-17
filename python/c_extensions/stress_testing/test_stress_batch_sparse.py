@@ -44,11 +44,14 @@ class TestSparseGradient(unittest.TestCase):
         # initialize database
         dfs = []
 
+        # generate a least squares well-conditioned in z
+        in_z = True
+
         for i,n in enumerate([100, 1000, 2000]):
-            m1 = n/10 # number of measurements
-            m2 = n/100 # number of blocks
+            m1 = n/2 # number of measurements
+            m2 = n/10 # number of blocks
             A_sparse = 0.9
-            data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2)
+            data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
             A, b, x_true = data['A'], data['b'], data['x_true']
 
             #print 'norm(Ax_true-b):', np.linalg.norm(A.dot(x_true)-b)

@@ -19,7 +19,9 @@ import python.BATCH as batch
 from python.bsls_utils import (x2z, 
                                 qp_to_qp_in_z,
                                 random_least_squares,
-                                block_starts_to_M2)
+                                block_starts_to_M,
+                                block_starts_to_M2,
+                                block_starts_to_N)
 
 __author__ = 'jeromethai'
 
@@ -38,8 +40,22 @@ class TestStressBatch(unittest.TestCase):
         M = block_starts_to_M2(block_starts, n)
         print M
 
+        A = (np.random.random((5, 10)) > 0.9).astype(np.float)
+        print A
 
+        print A.dot(M)
 
+        # M = block_starts_to_M(block_starts, n, True)
+        # print M
+
+        # M = block_starts_to_M(block_starts, n)
+        # print M
+
+        # N = block_starts_to_N(block_starts, n, True)
+        # print N
+
+        # N = block_starts_to_N(block_starts, n)
+        # print N
 
 if __name__ == '__main__':
     unittest.main()

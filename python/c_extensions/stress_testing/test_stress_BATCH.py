@@ -69,6 +69,9 @@ class TestStressBatch(unittest.TestCase):
         # initialize database
         dfs = []
 
+        # generate a least squares well-conditioned in z
+        in_z = True
+
         for i,n in enumerate([100, 500, 1000]): # dimension of features
 
             m = 1.5*n # number of measurements
@@ -80,7 +83,7 @@ class TestStressBatch(unittest.TestCase):
             #print block_starts
             #block_starts = np.array([0])
 
-            Q, c, x_true, f_min, min_eig = random_least_squares(m, n, block_starts, 0.5, True)
+            Q, c, x_true, f_min, min_eig = random_least_squares(m, n, block_starts, 0.5, in_z=in_z)
             print 'condition number in x', min_eig / np.linalg.eig(Q)[0][1]
             G = np.diag([-1.0]*n)
             h = [1.]*n
@@ -192,16 +195,16 @@ class TestStressBatch(unittest.TestCase):
 
             # mirror descent
 
-            x_init = np.ones(n) / n
-            start_time = time.time()
-            def step_size(i):
-                return decreasing_step_size(i, 1.0, min_eig/16.0)
-            sol = batch.solve_MD(obj,block_starts, step_size, x_init)
-            times_md.append(time.time() - start_time)
-            #precision_batch.append(np.linalg.norm(sol['x']-x_true))
-            precision_md.append(obj(sol['x']) - f_min)
-            iters_md.append(sol['iterations'])
-            dfs.append(save_progress(sol['progress'], f_min, 'md_x_'+str(i)))
+            # x_init = np.ones(n) / n
+            # start_time = time.time()
+            # def step_size(i):
+            #     return decreasing_step_size(i, 1.0, min_eig/16.0)
+            # sol = batch.solve_MD(obj,block_starts, step_size, x_init)
+            # times_md.append(time.time() - start_time)
+            # #precision_batch.append(np.linalg.norm(sol['x']-x_true))
+            # precision_md.append(obj(sol['x']) - f_min)
+            # iters_md.append(sol['iterations'])
+            # dfs.append(save_progress(sol['progress'], f_min, 'md_x_'+str(i)))
 
         progress = pd.concat(dfs)
         progress.save('progress.pkl')

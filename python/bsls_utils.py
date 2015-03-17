@@ -159,74 +159,66 @@ def block_sizes_to_N(block_sizes):
     return sparse(N)
 
 
-def block_starts_to_N(block_starts, n):
+def block_starts_to_N(block_starts, n, lasso=False):
     """Convert a list of the block_starts to numpy array N
     n is dimentionality of x
+
+    if lasso: converts into lasso
     """
     block_sizes = np.append(block_starts[1:], [n]) - block_starts
-    m = np.sum(block_sizes)
-    n = m - block_sizes.shape[0]
-    N = np.zeros((m,n))
+    if lasso:
+        N = np.zeros((n,n))
+    else:
+        N = np.zeros((n, n-block_sizes.shape[0]))
     start_row = 0
     start_col = 0
     for i, block_size in enumerate(block_sizes):
-        if block_size < 2:
-            start_row += block_size
-            start_col += block_size - 1
-            continue
-        for j in xrange(block_size-1):
-            N[start_row+j, start_col+j] = 1
-            N[start_row+j+1, start_col+j] = -1
+        if block_size >= 2:
+            for j in xrange(block_size-1):
+                N[start_row+j, start_col+j] = 1
+                N[start_row+j+1, start_col+j] = -1
+        if lasso:
+            N[start_row+block_size-1, start_col+block_size-1] = 1
+            start_col += 1
         start_row += block_size
         start_col += block_size - 1
     return N
 
 
-def block_starts_to_M(block_starts, n):
+def block_starts_to_M(block_starts, n, lasso=False):
     """Convert a list of the block_starts to numpy array M
-    Be careful!
-    n is the dimenionality of x
-    block_starts is in the x variable
+    where M is the change of variable from z to x
+    Be careful, if not lasso:
+        n is the dimenionality of x
+        block_starts is in the x variable
+        converts z into x0, ..., x(n-1) for one block
+    if lasso:
+        x and z have same dimensionality
     """
     block_sizes = np.append(block_starts[1:], [n]) - block_starts
-    m = n - block_sizes.shape[0]
-    M = np.zeros((m,m))
+    if lasso:
+        M = np.zeros((n,n))
+    else:
+        m = n - block_sizes.shape[0]
+        M = np.zeros((m,m))
     ind = 0
     for i, block_size in enumerate(block_sizes):
-        for j in xrange(block_size-1):
+        if lasso:
+            end_block = block_size
+        else:
+            end_block = block_size-1
+        for j in xrange(end_block):
             for k in xrange(j+1):
                 M[ind+j, ind+k] = 1.0
-        ind += block_size - 1
+        ind += end_block
     return M
 
 
-def block_starts_to_M2(block_starts, n):
-    """Generates a change of variable matrix from z to x that
-    preserves dimension, i.e. 
-    z1 = x1
-    z2 = x1 + x2
-     ... 
-    z(n-1) = x1 + ... + x(n-1)
-    zn = xn
-    """
-    block_sizes = np.append(block_starts[1:], [n]) - block_starts
-    M = np.zeros((n,n))
-    ind = 0
-    for i, block_size in enumerate(block_sizes):
-        for j in xrange(block_size-1):
-            for k in xrange(j+1):
-                M[ind+j, ind+k] = 1.0
-        ind += block_size - 1
-        M[ind, ind] = 1.0
-        ind += 1
-    return M
-
-
-def Q_to_Q_in_z(Q, block_starts):
+def Q_to_Q_in_z(Q, block_starts, lasso=False):
     """Converts Q (Hessian of quadratic function)
     """
     n = Q.shape[0]
-    N = block_starts_to_N(block_starts, n)
+    N = block_starts_to_N(block_starts, n, lasso)
     return N.T.dot(Q).dot(N)
 
 
@@ -238,13 +230,16 @@ def construct_qp_from_least_squares(A, b):
     return Q, c
 
 
-def qp_to_qp_in_z(Q, c, block_starts):
+def qp_to_qp_in_z(Q, c, block_starts, lasso=False):
     """Convert qp to qp in z 
     """
     n = Q.shape[0]
-    x0 = block_starts_to_x0(block_starts, n)
-    N = block_starts_to_N(block_starts, n)
-    Qz = Q_to_Q_in_z(Q, block_starts)
+    if lasso:
+        x0 = np.zeros(n)
+    else:
+        x0 = block_starts_to_x0(block_starts, n)
+    N = block_starts_to_N(block_starts, n, lasso)
+    Qz = Q_to_Q_in_z(Q, block_starts, lasso)
     cz = N.T.dot(c + Q.dot(x0))
     cz = cz.flatten()
     # f0 is the objective value at x=x0
@@ -252,18 +247,21 @@ def qp_to_qp_in_z(Q, c, block_starts):
     return Qz, cz, N, x0, f0
 
 
-def ls_to_ls_in_z(A, b, block_starts):
+def ls_to_ls_in_z(A, b, block_starts, lasso=False):
     """Converts least squares to least squares in z
     """
     n = A.shape[1]
-    x0 = block_starts_to_x0(block_starts, n)
-    N = block_starts_to_N(block_starts, n)
+    if lasso:
+        x0 = np.zeros(n)
+    else:
+        x0 = block_starts_to_x0(block_starts, n)    
+    N = block_starts_to_N(block_starts, n, lasso)
     Az = A.dot(N)
     bz = b - A.dot(x0)
     return Az, bz, N, x0
 
 
-def x2z(x, block_sizes=None, block_starts=None):
+def x2z(x, block_sizes=None, block_starts=None, lasso=False):
     """
     Convert x (original splits) to z variable (eliminated eq constraint)
     :param x:
@@ -277,8 +275,12 @@ def x2z(x, block_sizes=None, block_starts=None):
     p = len(block_sizes)
     ind_end = np.cumsum(block_sizes)
     ind_start = np.hstack(([0],ind_end[:-1]))
-    z = np.concatenate([np.cumsum(x[i:j-1]) for i,j \
-                        in zip(ind_start,ind_end) if i<j-1])
+    if lasso:
+        k = 0
+    else:
+        k = 1
+    z = np.concatenate([np.cumsum(x[i:j-k]) for i,j \
+                        in zip(ind_start,ind_end) if i<j-k])
     return z
 
 # Helper functions
@@ -523,7 +525,7 @@ def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False):
     assert sparsity < 1.0
     A = np.random.randn(m, n)
     if in_z:
-        M = block_starts_to_M2(block_starts, n)
+        M = block_starts_to_M(block_starts, n, True)
         A = A.dot(M)
     x_true = abs(np.random.randn(n,1))
     if int(sparsity * n) > 0:
@@ -542,7 +544,7 @@ def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False):
 
 
 def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
-                  tolerance=1e-10, permute=True, scale=True):
+                  tolerance=1e-10, permute=True, scale=True, in_z=False):
     """
     A is m1 x n
     U is m2 x n
@@ -558,6 +560,10 @@ def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
     A = (np.random.random((m1, n)) > A_sparse).astype(np.float)
     block_sizes = np.random.multinomial(n-m2,np.ones(m2)/m2) + np.ones(m2)
     assert sum(block_sizes) == n, 'all-zero row present!'
+    block_starts = np.append([0], np.cumsum(block_sizes[:-1])).astype(int)
+    if in_z:
+        M = block_starts_to_M(block_starts, n, True)
+        A = A.dot(M)
     x = np.concatenate([np.random.dirichlet(alpha*np.ones(bs)) for bs in \
                         block_sizes])
     U = ssla.block_diag(*[np.ones(bs) for bs in block_sizes])
@@ -578,8 +584,6 @@ def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
         x = x[reorder]
         assert la.norm(U.dot(x)-f) < tolerance, "Ux!=f after permuting"
         assert la.norm(A.dot(x)-b) < tolerance, "Ax!=b after permuting"
-
-    block_starts = np.append([0], np.cumsum(block_sizes[:-1]))
 
     data = { 'A': A, 'b': b, 'x_true': x, 'U': U, 'f': f, 'block_starts': block_starts, 'blocks': block_sizes}
     if fname:

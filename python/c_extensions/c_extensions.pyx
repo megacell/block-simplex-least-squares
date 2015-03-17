@@ -16,6 +16,7 @@ import ctypes
 cdef extern from "proj_simplex.h":
     void proj_simplex(double *y, int start, int end)
     void proj_multi_simplex(double *y, int *blocks, int numblocks, int n)
+    void proj_multi_ball(double *y, int *blocks, int numblocks, int n)
 
 
 def proj_simplex_c(np.ndarray[np.double_t,ndim=1] y, start, end):
@@ -36,6 +37,17 @@ def proj_multi_simplex_c(np.ndarray[np.double_t,ndim=1] y,
     y_c = np.ascontiguousarray(y, dtype=np.double)
     b_c = np.ascontiguousarray(blocks, dtype=ctypes.c_int)
     proj_multi_simplex(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])
+
+
+def proj_multi_ball_c(np.ndarray[np.double_t,ndim=1] y, 
+                     np.ndarray[np.int_t,ndim=1] blocks):
+    assert False not in ((blocks[1:]-blocks[:-1])>0)
+    assert blocks[0]>=0 and blocks[-1]<y.shape[0]
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
+    cdef np.ndarray[int, ndim=1, mode="c"] b_c
+    y_c = np.ascontiguousarray(y, dtype=np.double)
+    b_c = np.ascontiguousarray(blocks, dtype=ctypes.c_int)
+    proj_multi_ball(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])
 
 
 cdef extern from "isotonic_regression.h":

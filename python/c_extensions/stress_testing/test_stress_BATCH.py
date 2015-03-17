@@ -70,7 +70,7 @@ class TestStressBatch(unittest.TestCase):
         dfs = []
 
         # generate a least squares well-conditioned in z
-        in_z = True
+        in_z = False
 
         for i,n in enumerate([100, 500, 1000]): # dimension of features
 

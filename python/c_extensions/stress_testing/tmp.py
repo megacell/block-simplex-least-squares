@@ -20,7 +20,6 @@ from python.bsls_utils import (x2z,
                                 qp_to_qp_in_z,
                                 random_least_squares,
                                 block_starts_to_M,
-                                block_starts_to_M2,
                                 block_starts_to_N)
 
 __author__ = 'jeromethai'
@@ -35,18 +34,49 @@ class TestStressBatch(unittest.TestCase):
 
 
     def test_block_starts_to_M(self):
-        n = 10
+        m = 7
+        n = 14
         block_starts = np.array([0, 3, 6])
-        M = block_starts_to_M2(block_starts, n)
+        M = block_starts_to_M(block_starts, n, True)
+        print 'M'
         print M
 
-        A = (np.random.random((5, 10)) > 0.9).astype(np.float)
+        A = (np.random.random((m, n)) > 0.9).astype(np.float)
+        print 'A'
         print A
 
+        print 'A.dot(M)'
         print A.dot(M)
 
-        # M = block_starts_to_M(block_starts, n, True)
-        # print M
+        for i in range(m):
+            if np.sum(A[i,:]) % 2 != 0:
+                j = np.random.randint(n)
+                if A[i,j] == 1.0:
+                    A[i,j] = 0.0
+                else:
+                    A[i,j] = 1.0
+
+
+        for i in range(m):
+            if np.sum(A[i,:]) % 2 != 0:
+                print 'odd'
+            else:
+                print 'even'
+
+        k = 1.0
+        for i in range(m):
+            for j in range(n):
+                if A[i,j] == 1.0:
+                    A[i,j] = k
+                    k *= -1
+        print 'A2'
+        print A
+
+        print 'A2.dot(M)'
+        print A.dot(M)   
+
+
+
 
         # M = block_starts_to_M(block_starts, n)
         # print M

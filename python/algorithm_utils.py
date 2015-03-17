@@ -177,7 +177,8 @@ def normalization(x, block_starts, block_ends):
         np.copyto(x[start:end], x[start:end] / np.sum(x[start:end]))
 
 
-def get_solver_parts(data, block_starts, min_eig, in_z=False, is_sparse=False):
+def get_solver_parts(data, block_starts, min_eig, in_z=False, 
+                    is_sparse=False, lasso=False):
     """Returns the step_size, proj, line_search, and obj functions
     for the least squares problem
 
@@ -214,8 +215,12 @@ def get_solver_parts(data, block_starts, min_eig, in_z=False, is_sparse=False):
             np.maximum(0.,x,x)
             np.minimum(1.,x,x)
     else:
-        def proj(x):
-            proj_multi_simplex_c(x, block_starts)
+        if lasso:
+            def proj(x):
+                proj_multi_ball_c(x, block_starts)
+        else:
+            def proj(x):
+                proj_multi_simplex_c(x, block_starts)
 
 
     def line_search(x, f, g, x_new, f_new, g_new, i):

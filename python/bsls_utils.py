@@ -514,25 +514,41 @@ def generate_small_qp():
     return Q, c, x_true, f_min, min_eig
 
 
-def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False):
+def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False,
+                        lasso=False):
     """
     Generate least squares from the standard normal distribution
     m: # measurements
     n: # dimension of features
     block_starts: sizes of the blocks
+    sparsity: sparsity in x_true
     in_z: if true, generate the normal distribution in z
+    lasso: if true, generate x_true inside the l1-ball
     """
     assert sparsity < 1.0
+
+    # construct A
     A = np.random.randn(m, n)
     if in_z:
         M = block_starts_to_M(block_starts, n, True)
         A = A.dot(M)
+
+    # construct, sparsity, normalize x_true
     x_true = abs(np.random.randn(n,1))
     if int(sparsity * n) > 0:
         zeros = np.random.choice(n, sparsity * n, replace=False)
         for i in zeros: x_true[i] == 0.0
     block_ends = np.append(block_starts[1:], [n])
     normalization(x_true, block_starts, block_ends)
+
+    # if LASSO, the projeciton is on the l1 ball
+    if lasso:
+        for start, end in zip(block_starts, block_ends):
+            if np.random.uniform() > 0.7:
+                alpha = np.random.uniform(0.5, 1)
+                np.copyto(x[start:end], x[start:end] * alpha)
+
+    # construct b, Q, c
     b = A.dot(x_true)
     x_true = x_true.flatten()
     Q, c = construct_qp_from_least_squares(A, b)

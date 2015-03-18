@@ -53,8 +53,8 @@ class TestSparseGradient(unittest.TestCase):
             m1 = n/10
             m2 = n/10
             A_sparse = 0.9
-            #data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
-            data = scipy.io.loadmat('test_mat.mat')
+            data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
+            #data = scipy.io.loadmat('test_mat.mat')
             A = data['A']
             b = np.squeeze(data['b'])
             x_true = np.squeeze(data['x_true'])

@@ -1,5 +1,5 @@
 
-from python.c_extensions.c_extensions import (proj_multi_simplex_c,  
+from c_extensions.c_extensions import (proj_multi_simplex_c,  
                                               isotonic_regression_multi_c,
                                               proj_multi_ball_c,
                                               isotonic_regression_multi_c_2)

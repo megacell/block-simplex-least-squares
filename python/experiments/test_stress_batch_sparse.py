@@ -49,13 +49,22 @@ class TestSparseGradient(unittest.TestCase):
         dfs = []
 
         # generate a least squares well-conditioned in z
-        in_z = False
+        in_z = True
 
-        for i,n in enumerate([100, 1000, 2000]):
+        experiment = 3 # 1, 2, or 3
+
+        if experiment == 1: 
+            dimensions = [100, 1000, 2000]
+        else:
+            dimensions = [-1] # load real network data which fixes the dimension
+
+        for i,n in enumerate(dimensions):
 
             print 'experiment', i
-
-            m1 = n/10 # number of measurements
+            if in_z:
+                m1 = n/10 # number of measurements
+            else:
+                m1 = n/2
             if in_z:
                 m2 = n/10 # number of blocks
             else:
@@ -63,17 +72,17 @@ class TestSparseGradient(unittest.TestCase):
 
             A_sparse = 0.9
 
-            # experiment 1
-            data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
-            f = None
+            if experiment == 1:
+                data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
+                f = None
 
-            # experiment 2
-            # data = scipy.io.loadmat('test_mat.mat')
-            # f = None
+            if experiment == 2:
+                data = scipy.io.loadmat('test_mat.mat')
+                f = None
 
-            # experiment 3
-            # data = load_and_process('data/small_network_data.pkl')
-            # f = data['f']
+            if experiment == 3:
+                data = load_and_process('data/small_network_data.pkl')
+                f = data['f']
 
 
             A = data['A']

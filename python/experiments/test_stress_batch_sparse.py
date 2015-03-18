@@ -10,7 +10,8 @@ from python.bsls_utils import (construct_qp_from_least_squares,
                                 generate_data,
                                 ls_to_ls_in_z,
                                 qp_to_qp_in_z,
-                                x2z)
+                                x2z,
+                                coherence)
 from python.algorithm_utils import get_solver_parts, save_progress
 from python.data_utils import load_and_process
 import python.BATCH as batch
@@ -51,22 +52,28 @@ class TestSparseGradient(unittest.TestCase):
         in_z = False
 
         for i,n in enumerate([100, 1000, 2000]):
+
+            print 'experiment', i
+
             m1 = n/10 # number of measurements
-            m2 = n/10 # number of blocks
+            if in_z:
+                m2 = n/10 # number of blocks
+            else:
+                m2 = n/50
+
             A_sparse = 0.9
 
-
             # experiment 1
-            # data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
-            # f = None
+            data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
+            f = None
 
             # experiment 2
             # data = scipy.io.loadmat('test_mat.mat')
             # f = None
 
             # experiment 3
-            data = load_and_process('data/small_network_data.pkl')
-            f = data['f']
+            # data = load_and_process('data/small_network_data.pkl')
+            # f = data['f']
 
 
             A = data['A']
@@ -99,7 +106,17 @@ class TestSparseGradient(unittest.TestCase):
             wz = np.linalg.eig(Qz)[0]
             min_eig_z = wz[-1]
             print 'min_eig_z', min_eig_z
-            print 'max_eig_z:', wz[0] 
+            print 'max_eig_z:', wz[0]
+
+            #print 'sum rows of A'
+            #m, n = A.shape
+            #print [np.sum(A[i,:]) for i in range(m)]
+            print 'coherence of A:', coherence(A)
+
+            #print 'sum rows of Az'
+            #m, n = Az.shape
+            #print [np.sum(Az[i,:]) for i in range(m)]
+            print 'coherence of Az:', coherence(Az)
 
             step_size, proj, line_search, obj = get_solver_parts((Q,c), block_starts, min_eig, f=f)
             _, _, line_search_sparse, obj_sparse = get_solver_parts((A,b), block_starts, min_eig, is_sparse=True, f=f)
@@ -195,26 +212,6 @@ class TestSparseGradient(unittest.TestCase):
         print 'error_cvxopt', error_cvxopt
         print 'iters_cvxopt', iters_cvxopt
 
-        print 'sum rows of A'
-        m, n = A.shape
-        print [np.sum(A[i,:]) for i in range(m)]
-        for i in range(m): A[i,:] = A[i,:]/np.linalg.norm(A[i,:])
-        coherence = 0.0
-        for i in range(m):
-            for j in range(i):
-                coherence = max(abs(A[i,:].dot(A[j,:])), coherence)
-        print coherence
-
-
-        print 'sum rows of Az'
-        m, n = Az.shape
-        print [np.sum(Az[i,:]) for i in range(m)]
-        for i in range(m): Az[i,:] = Az[i,:]/np.linalg.norm(Az[i,:])
-        coherence = 0.0
-        for i in range(m):
-            for j in range(i):
-                coherence = max(abs(Az[i,:].dot(Az[j,:])), coherence)
-        print coherence
 
 if __name__ == '__main__':
     unittest.main()

@@ -557,8 +557,20 @@ def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False,
     w, v = np.linalg.eig(Q)
     f_min = quad_obj_np(x_true, Q, c)
     min_eig = w[-1]
-    return Q, c, x_true, f_min, min_eig
+    return Q, c, x_true, f_min, min_eig, A, b
 
+
+def coherence(A):
+    """get coherence of A
+    """ 
+    A2 = np.copy(A)
+    m, n = A2.shape
+    for i in range(m): A2[i,:] = A2[i,:]/np.linalg.norm(A2[i,:])
+    coherence = 0.0
+    for i in range(m):
+        for j in range(i):
+            coherence = max(abs(A2[i,:].dot(A2[j,:])), coherence)    
+    return coherence
 
 
 def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,

@@ -15,7 +15,9 @@ import python.BATCH as batch
 from python.bsls_utils import (x2z, 
                                 qp_to_qp_in_z,
                                 random_least_squares,
-                                normalization)
+                                normalization,
+                                coherence,
+                                ls_to_ls_in_z)
 
 
 #import ipdb
@@ -78,6 +80,8 @@ class TestStressBatch(unittest.TestCase):
 
         for i,n in enumerate([100, 500, 1000]): # dimension of features
 
+            print 'experiment', i
+
             m = 1.5*n # number of measurements
             #m = n/5 # number of measurements
             #m2 = n/20 # number of blocks
@@ -90,9 +94,10 @@ class TestStressBatch(unittest.TestCase):
             #print block_starts
             #block_starts = np.array([0])
 
-            Q, c, x_true, f_min, min_eig = random_least_squares(m, n, 
+            Q, c, x_true, f_min, min_eig, A, b = random_least_squares(m, n, 
                     block_starts, 0.5, in_z=in_z, lasso=lasso)
-            print 'condition number in x', min_eig / np.linalg.eig(Q)[0][1]
+            print 'condition number in x', np.linalg.eig(Q)[0][1] / min_eig
+
             G = np.diag([-1.0]*n)
             h = [1.]*n
             U = [1.]*n
@@ -107,7 +112,10 @@ class TestStressBatch(unittest.TestCase):
             f_min_z = f_min - f0
             #ipdb.set_trace()
             min_eig_z = np.linalg.eig(Qz)[0][-1]
-            print 'condition number in z', min_eig_z / np.linalg.eig(Qz)[0][1]
+            print 'condition number in z', np.linalg.eig(Qz)[0][1] / min_eig_z
+            Az = ls_to_ls_in_z(A, b, block_starts)[0]
+            print 'coherence in x', coherence(A)
+            print 'coherence in z', coherence(Az)
             step_size_z, proj_z, line_search_z, obj_z = get_solver_parts((Qz, cz), 
                     block_starts, min_eig_z, True, lasso=lasso)
 

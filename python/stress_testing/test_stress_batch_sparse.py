@@ -1,9 +1,11 @@
+import pdb
 import pandas as pd
 import time
 import unittest
 import numpy as np
 import sys
 sys.path.append('../../')
+import scipy
 from python.bsls_utils import (construct_qp_from_least_squares,
                                 generate_data,
                                 ls_to_ls_in_z,
@@ -48,22 +50,30 @@ class TestSparseGradient(unittest.TestCase):
         in_z = False
 
         for i,n in enumerate([100, 1000, 2000]):
-            m1 = n/10 # number of measurements
-            m2 = n/10 # number of blocks
+            m1 = n/10
+            m2 = n/10
             A_sparse = 0.9
-            data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
-            A, b, x_true = data['A'], data['b'], data['x_true']
+            #data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
+            data = scipy.io.loadmat('test_mat.mat')
+            A = data['A']
+            b = np.squeeze(data['b'])
+            x_true = np.squeeze(data['x_true'])
 
             #print 'norm(Ax_true-b):', np.linalg.norm(A.dot(x_true)-b)
-            block_starts = data['block_starts'].astype(int)
-            block_sizes = data['blocks'].astype(int)
+            block_starts = np.squeeze(data['block_starts']).astype(int)
+            block_sizes = np.squeeze(data['blocks']).astype(int)
+
+            n = x_true.shape[0]
+            m1 = b.shape[0]           # number of measurements
+            m2 = block_sizes.shape[0] # number of blocks
+
             Az, bz, N, x0 = ls_to_ls_in_z(A, b, block_starts)
             #print 'block_sizes:', block_sizes
             #print 'block_starts', block_starts
             G = np.diag([-1.0]*n)
             h = [1.]*n
             U = data['U']
-            f = data['f']
+            f = np.squeeze(data['f'])
             #print 'this is f', f
 
             Q, c = construct_qp_from_least_squares(A, b)

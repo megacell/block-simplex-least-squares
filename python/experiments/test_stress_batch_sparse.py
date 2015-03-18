@@ -12,6 +12,7 @@ from python.bsls_utils import (construct_qp_from_least_squares,
                                 qp_to_qp_in_z,
                                 x2z)
 from python.algorithm_utils import get_solver_parts, save_progress
+from python.data_utils import load_and_process
 import python.BATCH as batch
 
 from openopt import QP
@@ -50,24 +51,37 @@ class TestSparseGradient(unittest.TestCase):
         in_z = False
 
         for i,n in enumerate([100, 1000, 2000]):
-            m1 = n/10
-            m2 = n/10
+            m1 = n/10 # number of measurements
+            m2 = n/10 # number of blocks
             A_sparse = 0.9
-            data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
-            #data = scipy.io.loadmat('test_mat.mat')
+
+
+            # experiment 1
+            # data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
+            # f = None
+
+            # experiment 2
+            # data = scipy.io.loadmat('test_mat.mat')
+            # f = None
+
+            # experiment 3
+            data = load_and_process('data/small_network_data.pkl')
+            f = data['f']
+
+
             A = data['A']
             b = np.squeeze(data['b'])
             x_true = np.squeeze(data['x_true'])
 
             #print 'norm(Ax_true-b):', np.linalg.norm(A.dot(x_true)-b)
             block_starts = np.squeeze(data['block_starts']).astype(int)
-            block_sizes = np.squeeze(data['blocks']).astype(int)
+            block_sizes = np.squeeze(data['block_sizes']).astype(int)
 
             n = x_true.shape[0]
             m1 = b.shape[0]           # number of measurements
             m2 = block_sizes.shape[0] # number of blocks
 
-            Az, bz, N, x0 = ls_to_ls_in_z(A, b, block_starts)
+            Az, bz, N, x0 = ls_to_ls_in_z(A, b, block_starts, f=f)
             #print 'block_sizes:', block_sizes
             #print 'block_starts', block_starts
             G = np.diag([-1.0]*n)
@@ -77,7 +91,7 @@ class TestSparseGradient(unittest.TestCase):
             #print 'this is f', f
 
             Q, c = construct_qp_from_least_squares(A, b)
-            Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts)
+            Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts, f=f)
             w = np.linalg.eig(Q)[0]
             min_eig = w[-1]
             print 'min_eig:', min_eig
@@ -85,10 +99,10 @@ class TestSparseGradient(unittest.TestCase):
             min_eig_z = wz[-1]
             print 'min_eig_z', min_eig_z
 
-            step_size, proj, line_search, obj = get_solver_parts((Q,c), block_starts, min_eig)
-            _, _, line_search_sparse, obj_sparse = get_solver_parts((A,b), block_starts, min_eig, is_sparse=True)
-            step_size_z, proj_z, line_search_z, obj_z = get_solver_parts((Qz, cz), block_starts, min_eig_z, True)
-            _, _, line_search_sparse_z, obj_sparse_z = get_solver_parts((Az,bz), block_starts, min_eig_z, is_sparse=True)
+            step_size, proj, line_search, obj = get_solver_parts((Q,c), block_starts, min_eig, f=f)
+            _, _, line_search_sparse, obj_sparse = get_solver_parts((A,b), block_starts, min_eig, is_sparse=True, f=f)
+            step_size_z, proj_z, line_search_z, obj_z = get_solver_parts((Qz, cz), block_starts, min_eig_z, True, f=f)
+            _, _, line_search_sparse_z, obj_sparse_z = get_solver_parts((Az,bz), block_starts, min_eig_z, is_sparse=True, f=f)
 
 
             f_min = obj(x_true)

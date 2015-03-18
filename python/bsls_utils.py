@@ -603,7 +603,7 @@ def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
         assert la.norm(U.dot(x)-f) < tolerance, "Ux!=f after permuting"
         assert la.norm(A.dot(x)-b) < tolerance, "Ax!=b after permuting"
 
-    data = { 'A': A, 'b': b, 'x_true': x, 'U': U, 'f': f, 'block_starts': block_starts, 'blocks': block_sizes}
+    data = { 'A': A, 'b': b, 'x_true': x, 'U': U, 'f': f, 'block_starts': block_starts, 'block_sizes': block_sizes}
     if fname:
         scipy.io.savemat(fname, data, oned_as='column')
     return data

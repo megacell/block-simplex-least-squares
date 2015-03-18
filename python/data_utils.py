@@ -79,7 +79,7 @@ def U_to_block_sizes(U):
     """
     block_sizes = []
     for i in range(U.shape[0]): block_sizes.append(np.sum(U[i,:]))
-    return np.array(block_sizes)
+    return np.array(block_sizes).astype(int)
 
 
 def process_data(A, b, U, f, x_true):
@@ -88,18 +88,36 @@ def process_data(A, b, U, f, x_true):
     U = U * P
     A = A * P
     x_true = P.T * x_true
-    # block_sizes = U_to_block_sizes(U)
-    # s = block_sizes.shape[0]
-    # j = 0
-    # # normalize the constraints to the simplex
-    # for i in range(s):
-    #     np.copyto(x_true[j:j+block_sizes[i]], x_true[j:j+block_sizes[i]] / f[i])
-    #     j += block_sizes[i]
-    # f = np.ones(s)
-    # b = A.dot(x_true)
+    block_sizes = U_to_block_sizes(U)
+    A, b, U, f, x_true, block_sizes = remove_size_one_blocks(A, b, U, f, x_true, block_sizes)
+    block_starts = np.append([0], np.cumsum(block_sizes)[:-1])
     assert np.linalg.norm(U.dot(x_true) - f) < 1e-5
     assert np.linalg.norm(A.dot(x_true) - b) < 1e-5
-    return A, b, U, f, x_true
+    return {'A': A, 'b': b, 'U': U, 'f': f, 'x_true': x_true, 
+        'block_sizes': block_sizes, 'block_starts': block_starts}
+
+
+def remove_size_one_blocks(A, b, U, f, x_true, block_sizes):
+    row, col = [], []
+    i, j = 0, 0
+    for i, block_size in enumerate(block_sizes):
+        if block_size == 1:
+            row.append(i)
+            col.append(j)
+        j += block_size
+    for j in col:
+        b -= x_true[j] * np.squeeze(A[:,j])
+    U = np.delete(U,row,0)
+    U = np.delete(U,col,1)
+    A = np.delete(A,col,1)
+    f = np.delete(f,row,0)
+    x_true = np.delete(x_true,col,0)
+    assert np.linalg.norm(U.dot(x_true) - f) < 1e-5
+    assert np.linalg.norm(A.dot(x_true) - b) < 1e-5
+    return A, b, U, f, x_true, U_to_block_sizes(U)
+
+
+#
 
 
 def load_and_process(filepath):
@@ -108,9 +126,13 @@ def load_and_process(filepath):
 
 
 if __name__ == '__main__':
-    A, b, U, f, x_true = load_and_process('experiments/data/small_network_data.pkl')
-    print f.shape
-    print U.shape
-    print x_true.shape
-    print U.dot(x_true)
+    data = load_and_process('experiments/data/small_network_data.pkl')
+    print data['f'].shape
+    print data['U'].shape
+    print data['x_true']
+    print data['U'].dot(data['x_true'])
+    print data['block_starts']
+    print data['block_sizes']
+    print data['A']
+
 

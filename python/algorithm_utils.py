@@ -191,45 +191,83 @@ def get_solver_parts(data, block_starts, min_eig, in_z=False,
     min_eig: minimum eigenvalue of Q = A.T.dot(A)
     in_z: if variable expressed in z or not
     is_sparse: if we consider general QP of sparse least-squares
+    lasso: if lasso, feasible set is l1-ball instead of simplex
+    f: if f is provided, normalize x in the projection step and de-normalize
     """
     if is_sparse:
         A, b = data
         A_sparse = sps.csr_matrix(A)
         A_sparse_T = sps.csr_matrix(A.T)
-        #n = A.shape[1]
+        n = A.shape[1]
         def obj(x, g=None):
             return sparse_least_squares_obj(x, A_sparse_T, A_sparse, b, g)
     else:
         Q, c = data
-        #n = Q.shape[0]
+        n = Q.shape[0]
         def obj(x, g=None):
             return quad_obj_np(x, Q, c, g)
 
     def step_size(i):
         return decreasing_step_size(i, 1.0, min_eig)
 
-    if in_z:
-        tmp = np.copy(block_starts)
-        if not lasso:
-            for i in range(len(tmp)): tmp[i] -= i
-        def proj(x):
-            #isotonic_regression_multi_c_2(x, tmp)
-            isotonic_regression_multi_c(x, tmp)
-            np.maximum(0.,x,x)
-            np.minimum(1.,x,x)
-    else:
-        if lasso:
+    if f is None:
+        # we don't have to normalize x_true
+        if in_z:
+            tmp = np.copy(block_starts)
+            if not lasso:
+                for i in range(len(tmp)): tmp[i] -= i
             def proj(x):
-                proj_multi_ball_c(x, block_starts)
+                #isotonic_regression_multi_c_2(x, tmp)
+                isotonic_regression_multi_c(x, tmp)
+                np.maximum(0.,x,x)
+                np.minimum(1.,x,x)
         else:
+            if lasso:
+                def proj(x):
+                    proj_multi_ball_c(x, block_starts)
+            else:
+                def proj(x):
+                    proj_multi_simplex_c(x, block_starts)
+    else:
+        # we have to normalize x_true
+        block_ends = np.append(block_starts[1:], [n])
+        if in_z:
+            tmp = np.copy(block_starts)
+            tmp2 = np.copy(block_ends)
+            if not lasso:
+                for i in range(len(tmp)): tmp[i] -= i
+                for i in range(len(tmp2)): tmp2[i] -= i+1
             def proj(x):
-                proj_multi_simplex_c(x, block_starts)
+                for k,i,j in zip(f, tmp, tmp2): 
+                    np.copyto(x[i:j], x[i:j] / k)
+                #isotonic_regression_multi_c_2(x, tmp)
+                isotonic_regression_multi_c(x, tmp)
+                np.maximum(0.,x,x)
+                np.minimum(1.,x,x)
+                for k,i,j in zip(f, tmp, tmp2): 
+                    np.copyto(x[i:j], x[i:j] * k)
+        else:
+            if lasso:
+                def proj(x):
+                    for k,i,j in zip(f, block_starts, block_ends): 
+                        np.copyto(x[i:j], x[i:j] / k)
+                    proj_multi_ball_c(x, block_starts)
+                    for k,i,j in zip(f, block_starts, block_ends): 
+                        np.copyto(x[i:j], x[i:j] * k)
+            else:
+                def proj(x):
+                    for k,i,j in zip(f, block_starts, block_ends): 
+                        np.copyto(x[i:j], x[i:j] / k)
+                    proj_multi_simplex_c(x, block_starts)
+                    for k,i,j in zip(f, block_starts, block_ends): 
+                        np.copyto(x[i:j], x[i:j] * k)
 
 
     def line_search(x, f, g, x_new, f_new, g_new, i):
         return line_search_np(x, f, g, x_new, f_new, g_new, obj)
 
     return step_size, proj, line_search, obj
+
 
 
 def save_progress(progress, f_min, name):

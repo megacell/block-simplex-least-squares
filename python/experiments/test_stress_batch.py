@@ -71,14 +71,15 @@ class TestStressBatch(unittest.TestCase):
         dfs = []
 
         # generate a least squares well-conditioned in z
-        in_z = False
+        in_z = True
 
         # if lasso, feasible set is the l1-ball
-        lasso = True
+        lasso = False
 
         for i,n in enumerate([100, 500, 1000]): # dimension of features
 
             m = 1.5*n # number of measurements
+            #m = n/5 # number of measurements
             #m2 = n/20 # number of blocks
             m2 = 1
             block_sizes = np.random.multinomial(n-m2,np.ones(m2)/m2) + np.ones(m2)

@@ -118,12 +118,13 @@ def block_starts_to_block_sizes(block_starts, n):
     return np.append(block_starts[1:], [n]) - block_starts
 
 
-def block_starts_to_x0(block_starts, n):
+def block_starts_to_x0(block_starts, n, f=None):
     """Convert block_starts to np.array vector x0 with 1 dimension
     """
+    if f is None: f = np.ones(block_starts.shape[0])
     x0 = np.zeros(n)
-    for i in block_starts[1:]-1: x0[i] = 1.0
-    x0[n-1] = 1.0
+    for i,j in zip(block_starts[1:]-1, f[:-1]): x0[i] = j
+    x0[n-1] = f[-1]
     return x0
 
 
@@ -232,14 +233,14 @@ def construct_qp_from_least_squares(A, b):
     return Q, c
 
 
-def qp_to_qp_in_z(Q, c, block_starts, lasso=False):
+def qp_to_qp_in_z(Q, c, block_starts, lasso=False, f=None):
     """Convert qp to qp in z 
     """
     n = Q.shape[0]
     if lasso:
         x0 = np.zeros(n)
     else:
-        x0 = block_starts_to_x0(block_starts, n)
+        x0 = block_starts_to_x0(block_starts, n, f)
     N = block_starts_to_N(block_starts, n, lasso)
     Qz = Q_to_Q_in_z(Q, block_starts, lasso)
     cz = N.T.dot(c + Q.dot(x0))
@@ -249,14 +250,14 @@ def qp_to_qp_in_z(Q, c, block_starts, lasso=False):
     return Qz, cz, N, x0, f0
 
 
-def ls_to_ls_in_z(A, b, block_starts, lasso=False):
+def ls_to_ls_in_z(A, b, block_starts, lasso=False, f=None):
     """Converts least squares to least squares in z
     """
     n = A.shape[1]
     if lasso:
         x0 = np.zeros(n)
     else:
-        x0 = block_starts_to_x0(block_starts, n)    
+        x0 = block_starts_to_x0(block_starts, n, f)   
     N = block_starts_to_N(block_starts, n, lasso)
     Az = A.dot(N)
     bz = b - A.dot(x0)

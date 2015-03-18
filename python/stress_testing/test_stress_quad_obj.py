@@ -2,7 +2,7 @@ import unittest
 import time
 import numpy as np
 import sys
-sys.path.append('../../../')
+sys.path.append('../../')
 from python.algorithm_utils import quad_obj_np, sparse_least_squares_obj
 from python.c_extensions.c_extensions import quad_obj_c
 from python.bsls_utils import generate_data, construct_qp_from_least_squares

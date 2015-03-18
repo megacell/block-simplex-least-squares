@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def display_progress():
 
-    progress = pd.load('progress.pkl')
+    progress = pd.load('results/progress.pkl')
 
     for algo in ['batch', 'bb', 'lbfgs']:
         for i in range(3):
@@ -25,7 +25,7 @@ def display_progress():
 
 def display_progress_sparse():
 
-    progress = pd.load('progress_sparse.pkl')
+    progress = pd.load('results/progress_sparse.pkl')
 
     for algo in ['lbfgs']:
         for i in range(3):

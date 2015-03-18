@@ -6,7 +6,7 @@ import sys
 import cvxopt as copt
 
 from openopt import QP
-sys.path.append('../../../')
+sys.path.append('../../')
 from python.algorithm_utils import (quad_obj_np,
                                     decreasing_step_size,
                                     get_solver_parts,
@@ -18,7 +18,7 @@ from python.bsls_utils import (x2z,
                                 normalization)
 
 
-import ipdb
+#import ipdb
 
 
 __author__ = 'jeromethai'
@@ -71,7 +71,7 @@ class TestStressBatch(unittest.TestCase):
         dfs = []
 
         # generate a least squares well-conditioned in z
-        in_z = True
+        in_z = False
 
         # if lasso, feasible set is the l1-ball
         lasso = True
@@ -79,7 +79,8 @@ class TestStressBatch(unittest.TestCase):
         for i,n in enumerate([100, 500, 1000]): # dimension of features
 
             m = 1.5*n # number of measurements
-            m2 = n/20 # number of blocks
+            #m2 = n/20 # number of blocks
+            m2 = 1
             block_sizes = np.random.multinomial(n-m2,np.ones(m2)/m2) + np.ones(m2)
             assert sum(block_sizes) == n
             block_starts = np.append([0], np.cumsum(block_sizes[:-1])).astype(int)
@@ -222,7 +223,7 @@ class TestStressBatch(unittest.TestCase):
             # dfs.append(save_progress(sol['progress'], f_min, 'md_x_'+str(i)))
 
         progress = pd.concat(dfs)
-        progress.save('progress.pkl')
+        progress.save('results/progress.pkl')
 
         # display results
 

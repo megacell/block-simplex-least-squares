@@ -1,7 +1,8 @@
 
 from python.c_extensions.c_extensions import (proj_multi_simplex_c,  
                                               isotonic_regression_multi_c,
-                                              proj_multi_ball_c)
+                                              proj_multi_ball_c,
+                                              isotonic_regression_multi_c_2)
 import numpy as np
 import scipy.sparse as sps
 import pandas as pd
@@ -212,6 +213,7 @@ def get_solver_parts(data, block_starts, min_eig, in_z=False,
         if not lasso:
             for i in range(len(tmp)): tmp[i] -= i
         def proj(x):
+            #isotonic_regression_multi_c_2(x, tmp)
             isotonic_regression_multi_c(x, tmp)
             np.maximum(0.,x,x)
             np.minimum(1.,x,x)

@@ -3,7 +3,7 @@ import time
 import unittest
 import numpy as np
 import sys
-sys.path.append('../../../')
+sys.path.append('../../')
 from python.bsls_utils import (construct_qp_from_least_squares,
                                 generate_data,
                                 ls_to_ls_in_z,
@@ -45,7 +45,7 @@ class TestSparseGradient(unittest.TestCase):
         dfs = []
 
         # generate a least squares well-conditioned in z
-        in_z = True
+        in_z = False
 
         for i,n in enumerate([100, 1000, 2000]):
             m1 = n/10 # number of measurements
@@ -146,7 +146,7 @@ class TestSparseGradient(unittest.TestCase):
             # error_cvxopt.append(obj(sol.xf) - f_min)
 
         progress = pd.concat(dfs)
-        progress.save('progress_sparse.pkl')
+        progress.save('results/progress_sparse.pkl')
 
         print 'times_lbfgs_x_dense', times_lbfgs_x_dense
         print 'error_lbfgs_x_dense', error_lbfgs_x_dense

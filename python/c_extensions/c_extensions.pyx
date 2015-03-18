@@ -53,6 +53,8 @@ def proj_multi_ball_c(np.ndarray[np.double_t,ndim=1] y,
 cdef extern from "isotonic_regression.h":
     void isotonic_regression(double *y, int start, int end)
     void isotonic_regression_multi(double *y, int *blocks, int numblocks, int n)
+    void isotonic_regression_2(double *y, int start, int end)
+    void isotonic_regression_multi_2(double *y, int *blocks, int numblocks, int n)
 
 
 def isotonic_regression_c(np.ndarray[np.double_t,ndim=1] y, start, end):
@@ -73,6 +75,26 @@ def isotonic_regression_multi_c(np.ndarray[np.double_t,ndim=1] y,
     y_c = np.ascontiguousarray(y, dtype=np.double)
     b_c = np.ascontiguousarray(blocks, dtype=ctypes.c_int)
     isotonic_regression_multi(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])
+
+
+def isotonic_regression_c_2(np.ndarray[np.double_t,ndim=1] y, start, end):
+    n = y.shape[0]
+    assert start>=0 and start<n and end>0 and end<=n
+    if start >= end: return
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
+    y_c = np.ascontiguousarray(y, dtype=np.double)
+    isotonic_regression_2(&y_c[0], start, end)
+
+
+def isotonic_regression_multi_c_2(np.ndarray[np.double_t,ndim=1] y, 
+                     np.ndarray[np.int_t,ndim=1] blocks):
+    assert False not in ((blocks[1:]-blocks[:-1])>0)
+    assert blocks[0]>=0 and blocks[-1]<y.shape[0]
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
+    cdef np.ndarray[int, ndim=1, mode="c"] b_c
+    y_c = np.ascontiguousarray(y, dtype=np.double)
+    b_c = np.ascontiguousarray(blocks, dtype=ctypes.c_int)
+    isotonic_regression_multi_2(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])
 
 
 cdef extern from "quadratic_objective.h":

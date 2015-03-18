@@ -6,7 +6,7 @@ import sys
 import cvxopt as copt
 
 from openopt import QP
-sys.path.append('../../../')
+sys.path.append('../../')
 from python.c_extensions.c_extensions import (proj_simplex_c,
                                        quad_obj_c,
                                        line_search_quad_obj_c,

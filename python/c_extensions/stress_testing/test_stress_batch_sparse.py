@@ -50,11 +50,11 @@ class TestSparseGradient(unittest.TestCase):
         in_z = True
 
         for i,n in enumerate([100, 1000, 2000]):
-            m1 = n/10 # number of measurements
-            m2 = n/10 # number of blocks
+            m1 = n/10
+            m2 = n/10
             A_sparse = 0.9
             #data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
-            data = scipy.io.loadmat('/home/chenyang/src/megacell/data/test_mat.mat')
+            data = scipy.io.loadmat('test_mat.mat')
             A = data['A']
             b = np.squeeze(data['b'])
             x_true = np.squeeze(data['x_true'])
@@ -62,6 +62,10 @@ class TestSparseGradient(unittest.TestCase):
             #print 'norm(Ax_true-b):', np.linalg.norm(A.dot(x_true)-b)
             block_starts = np.squeeze(data['block_starts']).astype(int)
             block_sizes = np.squeeze(data['blocks']).astype(int)
+
+            n = x_true.shape[0]
+            m1 = b.shape[0]           # number of measurements
+            m2 = block_sizes.shape[0] # number of blocks
 
             Az, bz, N, x0 = ls_to_ls_in_z(A, b, block_starts)
             #print 'block_sizes:', block_sizes

@@ -1,8 +1,10 @@
+import pdb
 import pandas as pd
 import time
 import unittest
 import numpy as np
 import sys
+import scipy
 sys.path.append('../../../')
 from python.bsls_utils import (construct_qp_from_least_squares,
                                 generate_data,
@@ -51,19 +53,23 @@ class TestSparseGradient(unittest.TestCase):
             m1 = n/10 # number of measurements
             m2 = n/10 # number of blocks
             A_sparse = 0.9
-            data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
-            A, b, x_true = data['A'], data['b'], data['x_true']
+            #data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
+            data = scipy.io.loadmat('/home/chenyang/src/megacell/data/test_mat.mat')
+            A = data['A']
+            b = np.squeeze(data['b'])
+            x_true = np.squeeze(data['x_true'])
 
             #print 'norm(Ax_true-b):', np.linalg.norm(A.dot(x_true)-b)
-            block_starts = data['block_starts'].astype(int)
-            block_sizes = data['blocks'].astype(int)
+            block_starts = np.squeeze(data['block_starts']).astype(int)
+            block_sizes = np.squeeze(data['blocks']).astype(int)
+
             Az, bz, N, x0 = ls_to_ls_in_z(A, b, block_starts)
             #print 'block_sizes:', block_sizes
             #print 'block_starts', block_starts
             G = np.diag([-1.0]*n)
             h = [1.]*n
             U = data['U']
-            f = data['f']
+            f = np.squeeze(data['f'])
             #print 'this is f', f
 
             Q, c = construct_qp_from_least_squares(A, b)

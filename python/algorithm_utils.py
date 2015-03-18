@@ -180,7 +180,7 @@ def normalization(x, block_starts, block_ends):
 
 
 def get_solver_parts(data, block_starts, min_eig, in_z=False, 
-                    is_sparse=False, lasso=False):
+                    is_sparse=False, lasso=False, f=None):
     """Returns the step_size, proj, line_search, and obj functions
     for the least squares problem
 

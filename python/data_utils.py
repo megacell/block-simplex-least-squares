@@ -2,7 +2,7 @@ import pickle
 import scipy.sparse as sps
 #import pandas as pd
 import numpy as np
-from bsls_utils import (block_starts_to_N)
+
 
 __author__ = 'jeromethai'
 
@@ -74,9 +74,43 @@ def permute_column(U):
     return sps.csr_matrix((data, (np.array(row), np.array(col))), shape=(n, n))
 
 
+def U_to_block_sizes(U):
+    """Make sure U is properly set up!
+    """
+    block_sizes = []
+    for i in range(U.shape[0]): block_sizes.append(np.sum(U[i,:]))
+    return np.array(block_sizes)
+
+
+def process_data(A, b, U, f, x_true):
+    # permute U
+    P = permute_column(U)
+    U = U * P
+    A = A * P
+    x_true = P.T * x_true
+    # block_sizes = U_to_block_sizes(U)
+    # s = block_sizes.shape[0]
+    # j = 0
+    # # normalize the constraints to the simplex
+    # for i in range(s):
+    #     np.copyto(x_true[j:j+block_sizes[i]], x_true[j:j+block_sizes[i]] / f[i])
+    #     j += block_sizes[i]
+    # f = np.ones(s)
+    # b = A.dot(x_true)
+    assert np.linalg.norm(U.dot(x_true) - f) < 1e-5
+    assert np.linalg.norm(A.dot(x_true) - b) < 1e-5
+    return A, b, U, f, x_true
+
+
+def load_and_process(filepath):
+    A, b, U, f, x_true = load_data(filepath)
+    return process_data(A, b, U, f, x_true)
 
 
 if __name__ == '__main__':
-    A, b, U, f, x_true = load_data('experiments/data/small_network_data.pkl')
-    P = permute_column(U)
-    print U * P
+    A, b, U, f, x_true = load_and_process('experiments/data/small_network_data.pkl')
+    print f.shape
+    print U.shape
+    print x_true.shape
+    print U.dot(x_true)
+

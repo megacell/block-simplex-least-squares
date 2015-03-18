@@ -95,9 +95,11 @@ class TestSparseGradient(unittest.TestCase):
             w = np.linalg.eig(Q)[0]
             min_eig = w[-1]
             print 'min_eig:', min_eig
+            print 'max_eig:', w[0] 
             wz = np.linalg.eig(Qz)[0]
             min_eig_z = wz[-1]
             print 'min_eig_z', min_eig_z
+            print 'max_eig_z:', wz[0] 
 
             step_size, proj, line_search, obj = get_solver_parts((Q,c), block_starts, min_eig, f=f)
             _, _, line_search_sparse, obj_sparse = get_solver_parts((A,b), block_starts, min_eig, is_sparse=True, f=f)
@@ -120,6 +122,7 @@ class TestSparseGradient(unittest.TestCase):
             error_lbfgs_x_dense.append(obj(sol['x']) - f_min)
             iters_lbfgs_x_dense.append(sol['iterations'])
             dfs.append(save_progress(sol['progress'], f_min, 'lbfgs_x_dense_'+str(i)))
+            print sol['stop']
 
             # lbfgs in x sparse
 
@@ -131,7 +134,7 @@ class TestSparseGradient(unittest.TestCase):
             error_lbfgs_x_sparse.append(obj(sol['x']) - f_min)
             iters_lbfgs_x_sparse.append(sol['iterations'])
             dfs.append(save_progress(sol['progress'], 0.0, 'lbfgs_x_sparse_'+str(i)))
-
+            print sol['stop']
 
             # lbfgs in z dense
 
@@ -144,7 +147,7 @@ class TestSparseGradient(unittest.TestCase):
             error_lbfgs_z_dense.append(obj_z(sol['x']) - f_min_z)
             iters_lbfgs_z_dense.append(sol['iterations'])
             dfs.append(save_progress(sol['progress'], f_min_z, 'lbfgs_z_dense_'+str(i)))
-
+            print sol['stop']
 
             # lbfgs in z sparse
 
@@ -157,7 +160,7 @@ class TestSparseGradient(unittest.TestCase):
             error_lbfgs_z_sparse.append(obj_z(sol['x']) - f_min_z)
             iters_lbfgs_z_sparse.append(sol['iterations'])
             dfs.append(save_progress(sol['progress'], 0.0, 'lbfgs_z_sparse_'+str(i)))
-
+            print sol['stop']
 
             # cvxopt
 
@@ -191,6 +194,27 @@ class TestSparseGradient(unittest.TestCase):
         print 'times_cvxopt', times_cvxopt
         print 'error_cvxopt', error_cvxopt
         print 'iters_cvxopt', iters_cvxopt
+
+        print 'sum rows of A'
+        m, n = A.shape
+        print [np.sum(A[i,:]) for i in range(m)]
+        for i in range(m): A[i,:] = A[i,:]/np.linalg.norm(A[i,:])
+        coherence = 0.0
+        for i in range(m):
+            for j in range(i):
+                coherence = max(abs(A[i,:].dot(A[j,:])), coherence)
+        print coherence
+
+
+        print 'sum rows of Az'
+        m, n = Az.shape
+        print [np.sum(Az[i,:]) for i in range(m)]
+        for i in range(m): Az[i,:] = Az[i,:]/np.linalg.norm(Az[i,:])
+        coherence = 0.0
+        for i in range(m):
+            for j in range(i):
+                coherence = max(abs(Az[i,:].dot(Az[j,:])), coherence)
+        print coherence
 
 if __name__ == '__main__':
     unittest.main()

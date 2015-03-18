@@ -45,7 +45,7 @@ def display_progress_sparse():
             x = progress.loc[algo+'_z_sparse_'+str(i)]['time']
             y = progress.loc[algo+'_z_sparse_'+str(i)]['f-f_min']            
             plt.plot(x, y, '--g', label='z_sparse')
-            
+            #plt.xscale('log')
             plt.yscale('log')
             plt.legend(loc=0)
             #plt.title(algo+' experiment '+str(i))

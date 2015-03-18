@@ -89,7 +89,9 @@ def process_data(A, b, U, f, x_true):
     A = A * P
     x_true = P.T * x_true
     block_sizes = U_to_block_sizes(U)
+    #A, b, U, f, x_true, block_sizes = remove_unused_paths(A, b, U, f, x_true, block_sizes)
     A, b, U, f, x_true, block_sizes = remove_size_one_blocks(A, b, U, f, x_true, block_sizes)
+    A, b = remove_measurement(A, b, 20.0) # 20, 40, 50, 60
     block_starts = np.append([0], np.cumsum(block_sizes)[:-1])
     assert np.linalg.norm(U.dot(x_true) - f) < 1e-5
     assert np.linalg.norm(A.dot(x_true) - b) < 1e-5
@@ -117,7 +119,51 @@ def remove_size_one_blocks(A, b, U, f, x_true, block_sizes):
     return A, b, U, f, x_true, U_to_block_sizes(U)
 
 
-#
+def remove_unused_paths(A, b, U, f, x_true, block_sizes, tol=1e-12):
+    ind = []
+    for i in range(x_true.shape[0]):
+        if x_true[i] < tol: ind.append(i)
+    for j in ind:
+        b -= x_true[j] * np.squeeze(A[:,j])
+    A = np.delete(A,ind,1)
+    U = np.delete(U,ind,1)
+    x_true = np.delete(x_true,ind,0)
+    assert np.linalg.norm(U.dot(x_true) - f) < 1e-5
+    assert np.linalg.norm(A.dot(x_true) - b) < 1e-5
+    return A, b, U, f, x_true, U_to_block_sizes(U)
+
+
+def remove_measurement(A, b, thres=0.0):
+    """Remove row if less than 'thres' routes go through the corresponding link
+    """
+    row = []
+    for i in range(A.shape[0]): 
+        if np.sum(A[i,:]) <= thres: row.append(i)
+    A = np.delete(A,row,0)
+    b = np.delete(b,row,0)
+    return A, b
+
+
+def remove_zeros_in_f(A, b, U, f, x_true, block_sizes, tol=1e-12):
+    """remove zeros from f
+    """
+    row, col = [], []
+    i, j = 0, 0
+    for i, block_size in enumerate(block_sizes):
+        if f[i] < tol:
+            row.append(i)
+            col += range(j, j+block_size)
+        j += block_size
+    for j in col:
+        b -= x_true[j] * np.squeeze(A[:,j])
+    U = np.delete(U,row,0)
+    U = np.delete(U,col,1)
+    A = np.delete(A,col,1)
+    f = np.delete(f,row,0)
+    x_true = np.delete(x_true,col,0)
+    assert np.linalg.norm(U.dot(x_true) - f) < 1e-5
+    assert np.linalg.norm(A.dot(x_true) - b) < 1e-5
+    return A, b, U, f, x_true, U_to_block_sizes(U)
 
 
 def load_and_process(filepath):
@@ -129,10 +175,13 @@ if __name__ == '__main__':
     data = load_and_process('experiments/data/small_network_data.pkl')
     print data['f'].shape
     print data['U'].shape
+    print data['x_true'].shape
     print data['x_true']
     print data['U'].dot(data['x_true'])
     print data['block_starts']
     print data['block_sizes']
-    print data['A']
+    A = data['A']
+    for i in range(A.shape[0]): print np.sum(A[i,:])
+    print A.shape
 
 

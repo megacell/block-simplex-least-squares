@@ -18,6 +18,7 @@ from python.data_utils import (load_and_process,
 import python.BATCH as batch
 
 from openopt import QP
+import cvxopt as copt
 
 __author__ = 'jeromethai'
 
@@ -69,7 +70,7 @@ class TestSparseGradient(unittest.TestCase):
         in_z = True
 
         # choose the experiment type
-        experiment = 3 # 1 or 3
+        experiment = 2 # 1 or 3
 
         for i,n in enumerate([1000]):
 
@@ -299,14 +300,21 @@ class TestSparseGradient(unittest.TestCase):
             print sol['stop']
 
             # cvxopt
+            # start_time = time.time()
+            # sol = copt.solvers.qp(copt.matrix(Q), copt.matrix(c),
+            #                       copt.matrix(G), copt.matrix(h),
+            #                       copt.matrix(U), copt.matrix(f))
+            # times_cvxopt.append(time.time() - start_time)
+            # iters_cvxopt.append(sol['iterations'])
+            # error_cvxopt.append(obj(np.squeeze(np.array(sol['x']))) - f_min)
 
-            problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
-            start_time = time.time()
-            sol = problem._solve('cvxopt_qp', iprint=0)
-            #times_cvxopt.append(sol.elapsed['solver_cputime'])
-            times_cvxopt.append(time.time() - start_time)
-            iters_cvxopt.append(sol.istop)
-            error_cvxopt.append(obj(sol.xf) - f_min)
+            # problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
+            # start_time = time.time()
+            # sol = problem._solve('cvxopt_qp', iprint=0)
+            # #times_cvxopt.append(sol.elapsed['solver_cputime'])
+            # times_cvxopt.append(time.time() - start_time)
+            # iters_cvxopt.append(sol.istop)
+            # error_cvxopt.append(obj(sol.xf) - f_min)
 
         progress = pd.concat(dfs)
         progress.save('results/progress_sparse.pkl')

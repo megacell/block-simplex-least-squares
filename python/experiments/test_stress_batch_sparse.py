@@ -13,10 +13,12 @@ from python.bsls_utils import (construct_qp_from_least_squares,
                                 x2z,
                                 coherence)
 from python.algorithm_utils import get_solver_parts, save_progress
-from python.data_utils import load_and_process
+from python.data_utils import (load_and_process,
+                               remove_size_one_blocks)
 import python.BATCH as batch
 
 from openopt import QP
+import cvxopt as copt
 
 __author__ = 'jeromethai'
 
@@ -96,12 +98,11 @@ class TestSparseGradient(unittest.TestCase):
                 data = load_and_process('data/small_network_data.pkl')
                 f = data['f']
 
-
             A = data['A']
             b = np.squeeze(data['b'])
             x_true = np.squeeze(data['x_true'])
-
-            #print 'norm(Ax_true-b):', np.linalg.norm(A.dot(x_true)-b)
+            U = data['U']
+            f = np.squeeze(data['f'])
             block_starts = np.squeeze(data['block_starts']).astype(int)
             block_sizes = np.squeeze(data['block_sizes']).astype(int)
 
@@ -109,13 +110,16 @@ class TestSparseGradient(unittest.TestCase):
             m1 = b.shape[0]           # number of measurements
             m2 = block_sizes.shape[0] # number of blocks
 
+            G = np.diag([-1.0]*n)
+            h = [1.]*n
+            #h = np.zeros(n)
+
+            #print 'norm(Ax_true-b):', np.linalg.norm(A.dot(x_true)-b)
+
             Az, bz, N, x0 = ls_to_ls_in_z(A, b, block_starts, f=f)
             #print 'block_sizes:', block_sizes
             #print 'block_starts', block_starts
-            G = np.diag([-1.0]*n)
-            h = np.zeros(n)
-            U = data['U']
-            f = np.squeeze(data['f'])
+
             #print 'this is f', f
 
             Q, c = construct_qp_from_least_squares(A, b)
@@ -123,7 +127,7 @@ class TestSparseGradient(unittest.TestCase):
             w = np.linalg.eig(Q)[0]
             min_eig = w[-1]
             print 'min_eig:', min_eig
-            print 'max_eig:', w[0] 
+            print 'max_eig:', w[0]
             wz = np.linalg.eig(Qz)[0]
             min_eig_z = wz[-1]
             print 'min_eig_z', min_eig_z

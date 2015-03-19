@@ -167,8 +167,22 @@ def remove_zeros_in_f(A, b, U, f, x_true, block_sizes, tol=1e-12):
 
 
 def load_and_process(filepath):
+    """Load small network of L.A. and process it
+    """
     A, b, U, f, x_true = load_data(filepath)
     return process_data(A, b, U, f, x_true)
+
+
+def clean_progress(x, y):
+    """Given a pandas dataframe with columns = ['time', 'f-f_min']
+    clean data and return f-f_min in log10 scale
+    also returns alpha, the rate of convergence
+    """
+    ind = [i for i in range(x.shape[0]) if y[i] <= 0.]
+    x = np.delete(x,ind,0)
+    log_y = np.log10(np.delete(y,ind,0))
+    alpha = x.T.dot(log_y-log_y[0]) / x.T.dot(x)
+    return x, log_y, alpha
 
 
 if __name__ == '__main__':

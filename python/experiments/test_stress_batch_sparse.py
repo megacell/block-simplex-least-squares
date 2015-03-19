@@ -68,7 +68,7 @@ class TestSparseGradient(unittest.TestCase):
         in_z = True
 
         # choose the experiment type
-        experiment = 3 # 1 or 3
+        experiment = 2 # 1 or 3
 
         for i,n in enumerate([1000]):
 
@@ -89,7 +89,7 @@ class TestSparseGradient(unittest.TestCase):
                 f = None
 
             if experiment == 2:
-                data = scipy.io.loadmat('test_mat.mat')
+                data = scipy.io.loadmat('data/test_mat.mat')
                 f = None
 
             if experiment == 3:
@@ -113,7 +113,7 @@ class TestSparseGradient(unittest.TestCase):
             #print 'block_sizes:', block_sizes
             #print 'block_starts', block_starts
             G = np.diag([-1.0]*n)
-            h = [1.]*n
+            h = np.zeros(n)
             U = data['U']
             f = np.squeeze(data['f'])
             #print 'this is f', f
@@ -148,6 +148,18 @@ class TestSparseGradient(unittest.TestCase):
             f_min = obj(x_true)
             f_min_z = f_min - f0
             #print 'check is equal zero:', f_min + 0.5*b.T.dot(b)
+
+            # cvxopt
+            # from cvxopt import sparse, matrix, solvers
+            # Q2 = sparse(matrix(Q))
+            # c2 = sparse(matrix(c))
+            # #problem = QP(Q2, c2, A=G, b=h, Aeq=U, beq=f)
+            # start_time = time.time()
+            # sol=solvers.qp(Q2, c2, A=G, b=h, A=U, b=f)
+            # #times_cvxopt.append(sol.elapsed['solver_cputime'])
+            # times_cvxopt.append(time.time() - start_time)
+            # iters_cvxopt.append(sol.istop)
+            # error_cvxopt.append(obj(sol.xf) - f_min)
 
             # batch in x sparse
 
@@ -296,15 +308,6 @@ class TestSparseGradient(unittest.TestCase):
             dfs.append(save_progress(sol['progress'], 0.0, 'lbfgs_z_sparse_'+str(i)))
             print sol['stop']
 
-            # cvxopt
-
-            problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
-            start_time = time.time()
-            sol = problem._solve('cvxopt_qp', iprint=0)
-            #times_cvxopt.append(sol.elapsed['solver_cputime'])
-            times_cvxopt.append(time.time() - start_time)
-            iters_cvxopt.append(sol.istop)
-            error_cvxopt.append(obj(sol.xf) - f_min)
 
         progress = pd.concat(dfs)
         progress.save('results/progress_sparse.pkl')

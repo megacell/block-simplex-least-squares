@@ -3,6 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
+sys.path.append('../')
+from data_utils import clean_progress
 
 def display_progress():
 
@@ -11,17 +13,17 @@ def display_progress():
     for algo in ['batch', 'bb', 'lbfgs']:
         for i in range(1):
             
-            x = np.array(progress.loc[algo+'_x_'+str(i)]['time'])
-            log_y = np.log10(np.array(progress.loc[algo+'_x_'+str(i)]['f-f_min']))
-
-            alpha = x.T.dot(log_y-log_y[0]) / x.T.dot(x)
+            data = progress.loc[algo+'_x_'+str(i)]
+            x = np.array(data['time'])
+            y = np.array(data['f-f_min'])
+            x, log_y, alpha = clean_progress(x, y)
             plt.plot(x, log_y, 'r', label='x')
             plt.plot(x, alpha*x + log_y[0], '--r', label='x')
 
-            x = np.array(progress.loc[algo+'_z_'+str(i)]['time'])
-            log_y = np.log10(np.array(progress.loc[algo+'_z_'+str(i)]['f-f_min']))
-
-            alpha = x.T.dot(log_y-log_y[0]) / x.T.dot(x)
+            data = progress.loc[algo+'_z_'+str(i)]
+            x = np.array(data['time'])
+            y = np.array(data['f-f_min'])
+            x, log_y, alpha = clean_progress(x, y)
             plt.plot(x, log_y, 'g', label='z')
             plt.plot(x, alpha*x + log_y[0], '--g', label='x')
 
@@ -32,6 +34,7 @@ def display_progress():
 def display_progress_sparse():
 
     progress = pd.load('results/progress_sparse.pkl')
+    print progress.loc['batch_z_sparse_0']
 
     for algo in ['batch', 'bb', 'lbfgs']:
         for i in range(1):
@@ -60,8 +63,8 @@ def display_progress_sparse():
 
 if __name__ == '__main__':
 
-    display_progress()
-    #display_progress_sparse()
+    #display_progress()
+    display_progress_sparse()
 
     # plt.plot(progress.loc['bb_x_2']['time'], progress.loc['bb_x_2']['f-f_min'], label='x')
     # plt.plot(progress.loc['bb_z_2']['time'], progress.loc['bb_z_2']['f-f_min'], label='z')

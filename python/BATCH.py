@@ -21,7 +21,7 @@ def solve(obj, proj, step_size, x_init, line_search=None, f_min=None, opt_tol=1e
     t_line = 0.
     # allocate memories and initialize
     n = x_init.shape[0]
-    x = x_init
+    x = np.copy(x_init)
     g = np.zeros(n)
     g_new = np.zeros(n)
     x_new = np.zeros(n)
@@ -69,7 +69,7 @@ def solve_BB(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
     t_line = 0.
     # allocate memories and initialize
     n = x_init.shape[0]
-    x = x_init
+    x = np.copy(x_init)
     g = np.zeros(n)
     delta_x = np.zeros(n)
     delta_g = np.zeros(n)
@@ -127,7 +127,7 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
     t_line = 0.
     # allocate memories and initialize
     n = x_init.shape[0]
-    x = x_init
+    x = np.copy(x_init)
     g = np.zeros(n)
     d = np.zeros(n) # search direction computed by LBFGS step
     alpha = np.zeros(corrections) # used in LBFGS
@@ -211,7 +211,7 @@ def solve_MD(obj, block_starts, step_size, x_init, line_search=None, f_min=None,
     block_ends = np.append(block_starts[1:], [n])
     def normalize(x):
         normalization(x, block_starts, block_ends)
-    x = x_init
+    x = np.copy(x_init)
     g = np.zeros(n)
     g_new = np.zeros(n)
     x_new = np.zeros(n)

@@ -6,13 +6,12 @@ import sys
 import cvxopt as copt
 
 from openopt import QP
-sys.path.append('../../')
-from python.algorithm_utils import (quad_obj_np,
-                                    decreasing_step_size,
+sys.path.append('../')
+from algorithm_utils import (decreasing_step_size,
                                     get_solver_parts,
                                     save_progress)
-import python.BATCH as batch
-from python.bsls_utils import (x2z, 
+import BATCH as batch
+from bsls_utils import (x2z, 
                                 qp_to_qp_in_z,
                                 random_least_squares,
                                 normalization,
@@ -83,7 +82,7 @@ class TestStressBatch(unittest.TestCase):
         if experiment == 2: in_z = True
         if experiment == 3: lasso = True
         if experiment == 4: in_z, lasso = True, True
-        if experiment == 5: distribution, alpha = 'truncated', 0.2
+        if experiment == 5: distribution, alpha = 'truncated', 1.5
         if experiment == 6: distribution, alpha = 'exponential', 0.2
 
 
@@ -103,11 +102,11 @@ class TestStressBatch(unittest.TestCase):
             #block_starts = np.array([0])
 
             Q, c, x_true, f_min, min_eig, A, b = random_least_squares(m, n, 
-                    block_starts, 0.7, in_z=in_z, lasso=lasso, distribution=distribution)
-            print 'maximum eigen value in x', np.linalg.eig(Q)[0][1]
-            print 'condition number in x', np.linalg.eig(Q)[0][1] / min_eig
-            #if experiment >= 5:
-            #    min_eig = 10.
+                    block_starts, 0.5, in_z=in_z, lasso=lasso, distribution=distribution)
+            print 'maximum eigen value in x', np.linalg.eig(Q)[0][0]
+            print 'condition number in x', np.linalg.eig(Q)[0][0] / min_eig
+            if experiment >= 5:
+                min_eig = 10.
 
             G = np.diag([-1.0]*n)
             h = [1.]*n
@@ -124,9 +123,9 @@ class TestStressBatch(unittest.TestCase):
             #ipdb.set_trace()
             min_eig_z = np.linalg.eig(Qz)[0][-1]
             print 'maximum eigen value in z', np.linalg.eig(Qz)[0][1]
-            print 'condition number in z', np.linalg.eig(Qz)[0][1] / min_eig_z
-            #if experiment >= 5:
-            #    min_eig_z = 10.
+            print 'condition number in z', np.linalg.eig(Qz)[0][0] / min_eig_z
+            if experiment >= 5:
+                min_eig_z = 10.
             Az = ls_to_ls_in_z(A, b, block_starts)[0]
             print 'coherence in x', coherence(A)
             print 'coherence in z', coherence(Az)

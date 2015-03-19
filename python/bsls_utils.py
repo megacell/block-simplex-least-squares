@@ -518,7 +518,7 @@ def generate_small_qp():
 
 
 def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False,
-                        lasso=False):
+                        lasso=False, truncated=False, distribution='normal'):
     """
     Generate least squares from the standard normal distribution
     m: # measurements
@@ -532,8 +532,15 @@ def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False,
 
     # construct A
     A = np.random.randn(m, n)
+    if distribution == 'truncated':
+        A = abs(A)
+    if distribution == 'exponential':
+        A = np.random.exponential(size=(m,n))
     if in_z:
         M = block_starts_to_M(block_starts, n, True)
+        #A = abs(A)
+        #M = np.diag(sorted(np.random.rand(n)*100)[::-1])
+        #A = abs(A)
         A = A.dot(M)
 
     # construct, sparsity, normalize x_true
@@ -557,8 +564,20 @@ def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False,
     w, v = np.linalg.eig(Q)
     f_min = quad_obj_np(x_true, Q, c)
     min_eig = w[-1]
-    return Q, c, x_true, f_min, min_eig
+    return Q, c, x_true, f_min, min_eig, A, b
 
+
+def coherence(A):
+    """get coherence of A
+    """ 
+    A2 = np.copy(A)
+    m, n = A2.shape
+    for i in range(m): A2[i,:] = A2[i,:]/np.linalg.norm(A2[i,:])
+    coherence = 0.0
+    for i in range(m):
+        for j in range(i):
+            coherence = max(abs(A2[i,:].dot(A2[j,:])), coherence)    
+    return coherence
 
 
 def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,

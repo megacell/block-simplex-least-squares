@@ -10,7 +10,8 @@ from python.bsls_utils import (construct_qp_from_least_squares,
                                 generate_data,
                                 ls_to_ls_in_z,
                                 qp_to_qp_in_z,
-                                x2z)
+                                x2z,
+                                coherence)
 from python.algorithm_utils import get_solver_parts, save_progress
 from python.data_utils import (load_and_process,
                                remove_size_one_blocks)
@@ -24,6 +25,22 @@ __author__ = 'jeromethai'
 class TestSparseGradient(unittest.TestCase):
 
     def test_sparse_gradient(self):
+
+        times_bb_x_dense = []
+        iters_bb_x_dense = []
+        error_bb_x_dense = []
+
+        times_bb_x_sparse = []
+        iters_bb_x_sparse = []
+        error_bb_x_sparse = []
+
+        times_bb_z_dense = []
+        iters_bb_z_dense = []
+        error_bb_z_dense = []
+
+        times_bb_z_sparse = []
+        iters_bb_z_sparse = []
+        error_bb_z_sparse = []
 
         times_lbfgs_x_dense = []
         iters_lbfgs_x_dense = []
@@ -49,26 +66,36 @@ class TestSparseGradient(unittest.TestCase):
         dfs = []
 
         # generate a least squares well-conditioned in z
-        in_z = False
+        in_z = True
 
-        for i,n in enumerate([100, 1000, 2000]):
-            m1 = n/10 # number of measurements
-            m2 = n/10 # number of blocks
+        # choose the experiment type
+        experiment = 3 # 1 or 3
+
+        for i,n in enumerate([1000]):
+
+            print 'experiment', i
+            if in_z:
+                m1 = n/10 # number of measurements
+            else:
+                m1 = n/2
+            if in_z:
+                m2 = n/10 # number of blocks
+            else:
+                m2 = n/50
+
             A_sparse = 0.9
 
+            if experiment == 1:
+                data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
+                f = None
 
-            # experiment 1
-            # data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
-            # f = None
+            if experiment == 2:
+                data = scipy.io.loadmat('test_mat.mat')
+                f = None
 
-            # experiment 2
-            data = scipy.io.loadmat('test_mat.mat')
-            f = None
-
-            # experiment 3
-            # data = load_and_process('data/small_network_data.pkl')
-            # f = data['f']
-
+            if experiment == 3:
+                data = load_and_process('data/small_network_data.pkl')
+                f = data['f']
 
             A = data['A']
             b = np.squeeze(data['b'])
@@ -98,23 +125,131 @@ class TestSparseGradient(unittest.TestCase):
             w = np.linalg.eig(Q)[0]
             min_eig = w[-1]
             print 'min_eig:', min_eig
+            print 'max_eig:', w[0]
             wz = np.linalg.eig(Qz)[0]
             min_eig_z = wz[-1]
             print 'min_eig_z', min_eig_z
+            print 'max_eig_z:', wz[0]
 
-            step_size, proj, line_search, obj = get_solver_parts((Q,c), block_starts, min_eig, f=f)
-            _, _, line_search_sparse, obj_sparse = get_solver_parts((A,b), block_starts, min_eig, is_sparse=True, f=f)
-            step_size_z, proj_z, line_search_z, obj_z = get_solver_parts((Qz, cz), block_starts, min_eig_z, True, f=f)
-            _, _, line_search_sparse_z, obj_sparse_z = get_solver_parts((Az,bz), block_starts, min_eig_z, is_sparse=True, f=f)
+            #print 'sum rows of A'
+            #m, n = A.shape
+            #print [np.sum(A[i,:]) for i in range(m)]
+            print 'coherence of A:', coherence(A)
+
+            #print 'sum rows of Az'
+            #m, n = Az.shape
+            #print [np.sum(Az[i,:]) for i in range(m)]
+            print 'coherence of Az:', coherence(Az)
+
+            step_size, proj, line_search, obj = get_solver_parts((Q,c), block_starts, 1e-4, f=f)
+            _, _, line_search_sparse, obj_sparse = get_solver_parts((A,b), block_starts, 10., is_sparse=True, f=f)
+            step_size_z, proj_z, line_search_z, obj_z = get_solver_parts((Qz, cz), block_starts, 1e-8, True, f=f)
+            _, _, line_search_sparse_z, obj_sparse_z = get_solver_parts((Az,bz), block_starts, 10., is_sparse=True, f=f)
 
 
             f_min = obj(x_true)
             f_min_z = f_min - f0
             #print 'check is equal zero:', f_min + 0.5*b.T.dot(b)
 
+            # batch in x sparse
+
+            x_init = np.random.rand(n)
+            proj(x_init)
+            #print obj(x_init)
+            start_time = time.time()
+            sol = batch.solve(obj_sparse, proj, step_size, x_init, line_search_sparse)
+            dfs.append(save_progress(sol['progress'], 0.0, 'batch_x_sparse_'+str(i)))
+            print sol['stop']
+
+
+            # batch in z sparse
+
+            x_init = np.random.rand(n)
+            proj(x_init)
+            z_init = x2z(x_init, block_starts=block_starts)
+            #print obj(x_init)
+            start_time = time.time()
+            sol = batch.solve(obj_sparse_z, proj_z, step_size_z, z_init, line_search_sparse_z)
+            dfs.append(save_progress(sol['progress'], 0.0, 'batch_z_sparse_'+str(i)))
+            print sol['stop']
+
+
+            # batch in x dense
+
+            x_init = np.random.rand(n)
+            proj(x_init)
+            #print obj(x_init)
+            start_time = time.time()
+            sol = batch.solve(obj, proj, step_size, x_init, line_search)
+            dfs.append(save_progress(sol['progress'], f_min, 'batch_x_dense_'+str(i)))
+            print sol['stop']
+
+
+            # batch in z dense
+
+            x_init = np.random.rand(n)
+            proj(x_init)
+            z_init = x2z(x_init, block_starts=block_starts)
+            #print obj(x_init)
+            start_time = time.time()
+            sol = batch.solve(obj_z, proj_z, step_size_z, z_init, line_search_z)
+            dfs.append(save_progress(sol['progress'], f_min_z, 'batch_z_dense_'+str(i)))
+            print sol['stop']
+
+            # bb in x dense
+
+            x_init = np.random.rand(n)
+            proj(x_init)
+            #print obj(x_init)
+            start_time = time.time()
+            sol = batch.solve_BB(obj, proj, line_search, x_init)
+            times_bb_x_dense.append(time.time() - start_time)
+            error_bb_x_dense.append(obj(sol['x']) - f_min)
+            iters_bb_x_dense.append(sol['iterations'])
+            dfs.append(save_progress(sol['progress'], f_min, 'bb_x_dense_'+str(i)))
+            print sol['stop']
+
+            # bb in x sparse
+
+            x_init = np.random.rand(n)
+            proj(x_init)
+            start_time = time.time()
+            sol = batch.solve_BB(obj_sparse, proj, line_search_sparse, x_init)
+            times_bb_x_sparse.append(time.time() - start_time)
+            error_bb_x_sparse.append(obj(sol['x']) - f_min)
+            iters_bb_x_sparse.append(sol['iterations'])
+            dfs.append(save_progress(sol['progress'], 0.0, 'bb_x_sparse_'+str(i)))
+            print sol['stop']
+
+            # bb in z dense
+
+            x_init = np.random.rand(n)
+            proj(x_init)
+            z_init = x2z(x_init, block_starts=block_starts)
+            start_time = time.time()
+            sol = batch.solve_BB(obj_z, proj_z, line_search_z, z_init)
+            times_bb_z_dense.append(time.time() - start_time)
+            error_bb_z_dense.append(obj_z(sol['x']) - f_min_z)
+            iters_bb_z_dense.append(sol['iterations'])
+            dfs.append(save_progress(sol['progress'], f_min_z, 'bb_z_dense_'+str(i)))
+            print sol['stop']
+
+            # bb in z sparse
+
+            x_init = np.random.rand(n)
+            proj(x_init)
+            z_init = x2z(x_init, block_starts=block_starts)
+            start_time = time.time()
+            sol = batch.solve_BB(obj_sparse_z, proj_z, line_search_sparse_z, z_init)
+            times_bb_z_sparse.append(time.time() - start_time)
+            error_bb_z_sparse.append(obj_z(sol['x']) - f_min_z)
+            iters_bb_z_sparse.append(sol['iterations'])
+            dfs.append(save_progress(sol['progress'], 0.0, 'bb_z_sparse_'+str(i)))
+            print sol['stop']
+
             # lbfgs in x dense
 
-            x_init = np.ones(n)
+            x_init = np.random.rand(n)
             proj(x_init)
             #print obj(x_init)
             start_time = time.time()
@@ -123,10 +258,11 @@ class TestSparseGradient(unittest.TestCase):
             error_lbfgs_x_dense.append(obj(sol['x']) - f_min)
             iters_lbfgs_x_dense.append(sol['iterations'])
             dfs.append(save_progress(sol['progress'], f_min, 'lbfgs_x_dense_'+str(i)))
+            print sol['stop']
 
             # lbfgs in x sparse
 
-            x_init = np.ones(n)
+            x_init = np.random.rand(n)
             proj(x_init)
             start_time = time.time()
             sol = batch.solve_LBFGS(obj_sparse, proj, line_search_sparse, x_init)
@@ -134,11 +270,11 @@ class TestSparseGradient(unittest.TestCase):
             error_lbfgs_x_sparse.append(obj(sol['x']) - f_min)
             iters_lbfgs_x_sparse.append(sol['iterations'])
             dfs.append(save_progress(sol['progress'], 0.0, 'lbfgs_x_sparse_'+str(i)))
-
+            print sol['stop']
 
             # lbfgs in z dense
 
-            x_init = np.ones(n)
+            x_init = np.random.rand(n)
             proj(x_init)
             z_init = x2z(x_init, block_starts=block_starts)
             start_time = time.time()
@@ -147,11 +283,11 @@ class TestSparseGradient(unittest.TestCase):
             error_lbfgs_z_dense.append(obj_z(sol['x']) - f_min_z)
             iters_lbfgs_z_dense.append(sol['iterations'])
             dfs.append(save_progress(sol['progress'], f_min_z, 'lbfgs_z_dense_'+str(i)))
-
+            print sol['stop']
 
             # lbfgs in z sparse
 
-            x_init = np.ones(n)
+            x_init = np.random.rand(n)
             proj(x_init)
             z_init = x2z(x_init, block_starts=block_starts)
             start_time = time.time()
@@ -160,17 +296,17 @@ class TestSparseGradient(unittest.TestCase):
             error_lbfgs_z_sparse.append(obj_z(sol['x']) - f_min_z)
             iters_lbfgs_z_sparse.append(sol['iterations'])
             dfs.append(save_progress(sol['progress'], 0.0, 'lbfgs_z_sparse_'+str(i)))
-
+            print sol['stop']
 
             # cvxopt
 
-            # problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
-            # start_time = time.time()
-            # sol = problem._solve('cvxopt_qp', iprint=0)
-            # #times_cvxopt.append(sol.elapsed['solver_cputime'])
-            # times_cvxopt.append(time.time() - start_time)
-            # iters_cvxopt.append(sol.istop)
-            # error_cvxopt.append(obj(sol.xf) - f_min)
+            problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
+            start_time = time.time()
+            sol = problem._solve('cvxopt_qp', iprint=0)
+            #times_cvxopt.append(sol.elapsed['solver_cputime'])
+            times_cvxopt.append(time.time() - start_time)
+            iters_cvxopt.append(sol.istop)
+            error_cvxopt.append(obj(sol.xf) - f_min)
 
         progress = pd.concat(dfs)
         progress.save('results/progress_sparse.pkl')
@@ -194,6 +330,7 @@ class TestSparseGradient(unittest.TestCase):
         print 'times_cvxopt', times_cvxopt
         print 'error_cvxopt', error_cvxopt
         print 'iters_cvxopt', iters_cvxopt
+
 
 if __name__ == '__main__':
     unittest.main()

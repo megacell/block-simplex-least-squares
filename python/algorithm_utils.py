@@ -114,7 +114,6 @@ def line_search_np(x, f, g, x_new, f_new, g_new, obj):
     """
     #print 'doing line_search'
     t = 1.0
-    #suffDec = 1e-4
     suffDec = 1e-4
     progTol = 1e-12
     upper_line = f + suffDec * g.dot(x_new - x)

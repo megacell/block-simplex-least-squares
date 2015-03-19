@@ -538,6 +538,9 @@ def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False,
         A = np.random.exponential(size=(m,n))
     if in_z:
         M = block_starts_to_M(block_starts, n, True)
+        #A = abs(A)
+        #M = np.diag(sorted(np.random.rand(n)*100)[::-1])
+        #A = abs(A)
         A = A.dot(M)
 
     # construct, sparsity, normalize x_true

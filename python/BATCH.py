@@ -28,7 +28,7 @@ def solve(obj, proj, step_size, x_init, line_search=None, f_min=None, opt_tol=1e
     f_old = np.inf
     i = 1
     f = obj(x, g) # should update content of g
-    progress = []
+    progress = [[0.0, f]]
     start_time = time.time()
     while True:
         flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)
@@ -78,7 +78,7 @@ def solve_BB(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
     f_old = np.inf
     i = 1
     f = obj(x, g) # should update content of g
-    progress = []
+    progress = [[0.0, f]]
     start_time = time.time()
     while True:
         flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)
@@ -138,7 +138,7 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
     f_old = np.inf
     i = 1
     f = obj(x, g) # should update content of g
-    progress = []
+    progress = [[0.0, f]]
     start_time = time.time()
     while True:
         #print 'objective in LBFGS:', f
@@ -218,7 +218,7 @@ def solve_MD(obj, block_starts, step_size, x_init, line_search=None, f_min=None,
     f_old = np.inf
     i = 1
     f = obj(x, g) # should update content of g
-    progress = []
+    progress = [[0.0, f]]
     start_time = time.time()
     while True:
         flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)

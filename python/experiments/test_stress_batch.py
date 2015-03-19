@@ -73,7 +73,7 @@ class TestStressBatch(unittest.TestCase):
         dfs = []
 
         # choose the experiment type
-        experiment = 6 # 1, 2, 3, 4, 5
+        experiment = 5 # 1, 2, 3, 4, 5
 
         # setting up experiment
         distribution = 'normal'
@@ -92,8 +92,8 @@ class TestStressBatch(unittest.TestCase):
             print 'experiment', i
 
             m = alpha*n # number of measurements
-            m2 = n/20 # number of blocks
-            #m2 = 1
+            #m2 = n/20 # number of blocks
+            m2 = 1
             block_sizes = np.random.multinomial(n-m2,np.ones(m2)/m2) + np.ones(m2)
             assert sum(block_sizes) == n
             block_starts = np.append([0], np.cumsum(block_sizes[:-1])).astype(int)
@@ -103,8 +103,11 @@ class TestStressBatch(unittest.TestCase):
             #block_starts = np.array([0])
 
             Q, c, x_true, f_min, min_eig, A, b = random_least_squares(m, n, 
-                    block_starts, 0.5, in_z=in_z, lasso=lasso, distribution=distribution)
+                    block_starts, 0.7, in_z=in_z, lasso=lasso, distribution=distribution)
+            print 'maximum eigen value in x', np.linalg.eig(Q)[0][1]
             print 'condition number in x', np.linalg.eig(Q)[0][1] / min_eig
+            #if experiment >= 5:
+            #    min_eig = 10.
 
             G = np.diag([-1.0]*n)
             h = [1.]*n
@@ -120,7 +123,10 @@ class TestStressBatch(unittest.TestCase):
             f_min_z = f_min - f0
             #ipdb.set_trace()
             min_eig_z = np.linalg.eig(Qz)[0][-1]
+            print 'maximum eigen value in z', np.linalg.eig(Qz)[0][1]
             print 'condition number in z', np.linalg.eig(Qz)[0][1] / min_eig_z
+            #if experiment >= 5:
+            #    min_eig_z = 10.
             Az = ls_to_ls_in_z(A, b, block_starts)[0]
             print 'coherence in x', coherence(A)
             print 'coherence in z', coherence(Az)

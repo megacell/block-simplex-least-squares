@@ -1,14 +1,14 @@
 import pickle
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import sys
 
 def display_progress():
 
     progress = pd.load('results/progress.pkl')
 
     for algo in ['batch', 'bb', 'lbfgs']:
-        for i in range(3):
+        for i in range(1):
             
             x = progress.loc[algo+'_x_'+str(i)]['time']
             y = progress.loc[algo+'_x_'+str(i)]['f-f_min']
@@ -27,8 +27,8 @@ def display_progress_sparse():
 
     progress = pd.load('results/progress_sparse.pkl')
 
-    for algo in ['lbfgs']:
-        for i in range(3):
+    for algo in ['bb', 'lbfgs']:
+        for i in range(1):
 
             x = progress.loc[algo+'_x_dense_'+str(i)]['time']
             y = progress.loc[algo+'_x_dense_'+str(i)]['f-f_min']
@@ -38,13 +38,13 @@ def display_progress_sparse():
             y = progress.loc[algo+'_z_dense_'+str(i)]['f-f_min']
             plt.plot(x, y, 'g', label='z dense')
 
-            x = progress.loc[algo+'_x_sparse_'+str(i)]['time']
-            y = progress.loc[algo+'_x_sparse_'+str(i)]['f-f_min']
-            plt.plot(x, y, '--r', label='x_sparse')
+            # x = progress.loc[algo+'_x_sparse_'+str(i)]['time']
+            # y = progress.loc[algo+'_x_sparse_'+str(i)]['f-f_min']
+            # plt.plot(x, y, '--r', label='x_sparse')
 
-            x = progress.loc[algo+'_z_sparse_'+str(i)]['time']
-            y = progress.loc[algo+'_z_sparse_'+str(i)]['f-f_min']            
-            plt.plot(x, y, '--g', label='z_sparse')
+            # x = progress.loc[algo+'_z_sparse_'+str(i)]['time']
+            # y = progress.loc[algo+'_z_sparse_'+str(i)]['f-f_min']            
+            # plt.plot(x, y, '--g', label='z_sparse')
             #plt.xscale('log')
             plt.yscale('log')
             plt.legend(loc=0)
@@ -54,8 +54,8 @@ def display_progress_sparse():
 
 if __name__ == '__main__':
 
-    #display_progress()
-    display_progress_sparse()
+    display_progress()
+    #display_progress_sparse()
 
     # plt.plot(progress.loc['bb_x_2']['time'], progress.loc['bb_x_2']['f-f_min'], label='x')
     # plt.plot(progress.loc['bb_z_2']['time'], progress.loc['bb_z_2']['f-f_min'], label='z')

@@ -25,6 +25,22 @@ class TestSparseGradient(unittest.TestCase):
 
     def test_sparse_gradient(self):
 
+        times_bb_x_dense = []
+        iters_bb_x_dense = []
+        error_bb_x_dense = []
+
+        times_bb_x_sparse = []
+        iters_bb_x_sparse = []
+        error_bb_x_sparse = []
+
+        times_bb_z_dense = []
+        iters_bb_z_dense = []
+        error_bb_z_dense = []
+
+        times_bb_z_sparse = []
+        iters_bb_z_sparse = []
+        error_bb_z_sparse = []
+
         times_lbfgs_x_dense = []
         iters_lbfgs_x_dense = []
         error_lbfgs_x_dense = []
@@ -51,14 +67,10 @@ class TestSparseGradient(unittest.TestCase):
         # generate a least squares well-conditioned in z
         in_z = True
 
-        experiment = 3 # 1, 2, or 3
+        # choose the experiment type
+        experiment = 3 # 1 or 3
 
-        if experiment == 1: 
-            dimensions = [100, 1000, 2000]
-        else:
-            dimensions = [-1] # load real network data which fixes the dimension
-
-        for i,n in enumerate(dimensions):
+        for i,n in enumerate([1000]):
 
             print 'experiment', i
             if in_z:
@@ -137,9 +149,82 @@ class TestSparseGradient(unittest.TestCase):
             f_min_z = f_min - f0
             #print 'check is equal zero:', f_min + 0.5*b.T.dot(b)
 
+            # batch in x dense
+
+            # x_init = np.random.rand(n)
+            # proj(x_init)
+            # #print obj(x_init)
+            # start_time = time.time()
+            # sol = batch.solve(obj, proj, step_size, x_init, line_search)
+            # dfs.append(save_progress(sol['progress'], f_min, 'batch_x_dense_'+str(i)))
+            # print sol['stop']
+
+
+            # batch in z dense
+
+            # x_init = np.random.rand(n)
+            # proj(x_init)
+            # z_init = x2z(x_init, block_starts=block_starts)
+            # #print obj(x_init)
+            # start_time = time.time()
+            # sol = batch.solve(obj_z, proj_z, step_size_z, z_init, line_search_z)
+            # dfs.append(save_progress(sol['progress'], f_min_z, 'batch_z_dense_'+str(i)))
+            # print sol['stop']
+
+            # bb in x dense
+
+            x_init = np.random.rand(n)
+            proj(x_init)
+            #print obj(x_init)
+            start_time = time.time()
+            sol = batch.solve_BB(obj, proj, line_search, x_init)
+            times_bb_x_dense.append(time.time() - start_time)
+            error_bb_x_dense.append(obj(sol['x']) - f_min)
+            iters_bb_x_dense.append(sol['iterations'])
+            dfs.append(save_progress(sol['progress'], f_min, 'bb_x_dense_'+str(i)))
+            print sol['stop']
+
+            # bb in x sparse
+
+            # x_init = np.random.rand(n)
+            # proj(x_init)
+            # start_time = time.time()
+            # sol = batch.solve_BB(obj_sparse, proj, line_search_sparse, x_init)
+            # times_bb_x_sparse.append(time.time() - start_time)
+            # error_bb_x_sparse.append(obj(sol['x']) - f_min)
+            # iters_bb_x_sparse.append(sol['iterations'])
+            # dfs.append(save_progress(sol['progress'], 0.0, 'bb_x_sparse_'+str(i)))
+            # print sol['stop']
+
+            # bb in z dense
+
+            x_init = np.random.rand(n)
+            proj(x_init)
+            z_init = x2z(x_init, block_starts=block_starts)
+            start_time = time.time()
+            sol = batch.solve_BB(obj_z, proj_z, line_search_z, z_init)
+            times_bb_z_dense.append(time.time() - start_time)
+            error_bb_z_dense.append(obj_z(sol['x']) - f_min_z)
+            iters_bb_z_dense.append(sol['iterations'])
+            dfs.append(save_progress(sol['progress'], f_min_z, 'bb_z_dense_'+str(i)))
+            print sol['stop']
+
+            # bb in z sparse
+
+            # x_init = np.random.rand(n)
+            # proj(x_init)
+            # z_init = x2z(x_init, block_starts=block_starts)
+            # start_time = time.time()
+            # sol = batch.solve_BB(obj_sparse_z, proj_z, line_search_sparse_z, z_init)
+            # times_bb_z_sparse.append(time.time() - start_time)
+            # error_bb_z_sparse.append(obj_z(sol['x']) - f_min_z)
+            # iters_bb_z_sparse.append(sol['iterations'])
+            # dfs.append(save_progress(sol['progress'], 0.0, 'bb_z_sparse_'+str(i)))
+            # print sol['stop']
+
             # lbfgs in x dense
 
-            x_init = np.ones(n)
+            x_init = np.random.rand(n)
             proj(x_init)
             #print obj(x_init)
             start_time = time.time()
@@ -152,19 +237,19 @@ class TestSparseGradient(unittest.TestCase):
 
             # lbfgs in x sparse
 
-            x_init = np.ones(n)
-            proj(x_init)
-            start_time = time.time()
-            sol = batch.solve_LBFGS(obj_sparse, proj, line_search_sparse, x_init)
-            times_lbfgs_x_sparse.append(time.time() - start_time)
-            error_lbfgs_x_sparse.append(obj(sol['x']) - f_min)
-            iters_lbfgs_x_sparse.append(sol['iterations'])
-            dfs.append(save_progress(sol['progress'], 0.0, 'lbfgs_x_sparse_'+str(i)))
-            print sol['stop']
+            # x_init = np.random.rand(n)
+            # proj(x_init)
+            # start_time = time.time()
+            # sol = batch.solve_LBFGS(obj_sparse, proj, line_search_sparse, x_init)
+            # times_lbfgs_x_sparse.append(time.time() - start_time)
+            # error_lbfgs_x_sparse.append(obj(sol['x']) - f_min)
+            # iters_lbfgs_x_sparse.append(sol['iterations'])
+            # dfs.append(save_progress(sol['progress'], 0.0, 'lbfgs_x_sparse_'+str(i)))
+            # print sol['stop']
 
             # lbfgs in z dense
 
-            x_init = np.ones(n)
+            x_init = np.random.rand(n)
             proj(x_init)
             z_init = x2z(x_init, block_starts=block_starts)
             start_time = time.time()
@@ -177,26 +262,26 @@ class TestSparseGradient(unittest.TestCase):
 
             # lbfgs in z sparse
 
-            x_init = np.ones(n)
-            proj(x_init)
-            z_init = x2z(x_init, block_starts=block_starts)
-            start_time = time.time()
-            sol = batch.solve_LBFGS(obj_sparse_z, proj_z, line_search_sparse_z, z_init)
-            times_lbfgs_z_sparse.append(time.time() - start_time)
-            error_lbfgs_z_sparse.append(obj_z(sol['x']) - f_min_z)
-            iters_lbfgs_z_sparse.append(sol['iterations'])
-            dfs.append(save_progress(sol['progress'], 0.0, 'lbfgs_z_sparse_'+str(i)))
-            print sol['stop']
+            # x_init = np.random.rand(n)
+            # proj(x_init)
+            # z_init = x2z(x_init, block_starts=block_starts)
+            # start_time = time.time()
+            # sol = batch.solve_LBFGS(obj_sparse_z, proj_z, line_search_sparse_z, z_init)
+            # times_lbfgs_z_sparse.append(time.time() - start_time)
+            # error_lbfgs_z_sparse.append(obj_z(sol['x']) - f_min_z)
+            # iters_lbfgs_z_sparse.append(sol['iterations'])
+            # dfs.append(save_progress(sol['progress'], 0.0, 'lbfgs_z_sparse_'+str(i)))
+            # print sol['stop']
 
             # cvxopt
 
-            # problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
-            # start_time = time.time()
-            # sol = problem._solve('cvxopt_qp', iprint=0)
-            # #times_cvxopt.append(sol.elapsed['solver_cputime'])
-            # times_cvxopt.append(time.time() - start_time)
-            # iters_cvxopt.append(sol.istop)
-            # error_cvxopt.append(obj(sol.xf) - f_min)
+            problem = QP(Q, c, A=G, b=h, Aeq=U, beq=f)
+            start_time = time.time()
+            sol = problem._solve('cvxopt_qp', iprint=0)
+            #times_cvxopt.append(sol.elapsed['solver_cputime'])
+            times_cvxopt.append(time.time() - start_time)
+            iters_cvxopt.append(sol.istop)
+            error_cvxopt.append(obj(sol.xf) - f_min)
 
         progress = pd.concat(dfs)
         progress.save('results/progress_sparse.pkl')

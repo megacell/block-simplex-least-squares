@@ -91,7 +91,7 @@ def process_data(A, b, U, f, x_true):
     block_sizes = U_to_block_sizes(U)
     #A, b, U, f, x_true, block_sizes = remove_unused_paths(A, b, U, f, x_true, block_sizes)
     A, b, U, f, x_true, block_sizes = remove_size_one_blocks(A, b, U, f, x_true, block_sizes)
-    A, b = remove_measurement(A, b, 20.0) # 20, 40, 50, 60
+    A, b = remove_measurement(A, b, 0.0)
     block_starts = np.append([0], np.cumsum(block_sizes)[:-1])
     assert np.linalg.norm(U.dot(x_true) - f) < 1e-5
     assert np.linalg.norm(A.dot(x_true) - b) < 1e-5

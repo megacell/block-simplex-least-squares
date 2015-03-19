@@ -518,7 +518,7 @@ def generate_small_qp():
 
 
 def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False,
-                        lasso=False):
+                        lasso=False, truncated=False, distribution='normal'):
     """
     Generate least squares from the standard normal distribution
     m: # measurements
@@ -532,6 +532,10 @@ def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False,
 
     # construct A
     A = np.random.randn(m, n)
+    if distribution == 'truncated':
+        A = abs(A)
+    if distribution == 'exponential':
+        A = np.random.exponential(size=(m,n))
     if in_z:
         M = block_starts_to_M(block_starts, n, True)
         A = A.dot(M)

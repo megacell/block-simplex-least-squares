@@ -72,20 +72,28 @@ class TestStressBatch(unittest.TestCase):
         # initialize database
         dfs = []
 
-        # generate a least squares well-conditioned in z
-        in_z = True
+        # choose the experiment type
+        experiment = 6 # 1, 2, 3, 4, 5
 
-        # if lasso, feasible set is the l1-ball
+        # setting up experiment
+        distribution = 'normal'
+        in_z = False
         lasso = False
+        alpha = 1.5
+        if experiment == 2: in_z = True
+        if experiment == 3: lasso = True
+        if experiment == 4: in_z, lasso = True, True
+        if experiment == 5: distribution, alpha = 'truncated', 0.2
+        if experiment == 6: distribution, alpha = 'exponential', 0.2
 
-        for i,n in enumerate([100, 500, 1000]): # dimension of features
+
+        for i,n in enumerate([1000]): # dimension of features
 
             print 'experiment', i
 
-            m = 1.5*n # number of measurements
-            #m = n/5 # number of measurements
-            #m2 = n/20 # number of blocks
-            m2 = 1
+            m = alpha*n # number of measurements
+            m2 = n/20 # number of blocks
+            #m2 = 1
             block_sizes = np.random.multinomial(n-m2,np.ones(m2)/m2) + np.ones(m2)
             assert sum(block_sizes) == n
             block_starts = np.append([0], np.cumsum(block_sizes[:-1])).astype(int)
@@ -95,7 +103,7 @@ class TestStressBatch(unittest.TestCase):
             #block_starts = np.array([0])
 
             Q, c, x_true, f_min, min_eig, A, b = random_least_squares(m, n, 
-                    block_starts, 0.5, in_z=in_z, lasso=lasso)
+                    block_starts, 0.5, in_z=in_z, lasso=lasso, distribution=distribution)
             print 'condition number in x', np.linalg.eig(Q)[0][1] / min_eig
 
             G = np.diag([-1.0]*n)

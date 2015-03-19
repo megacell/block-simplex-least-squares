@@ -5,7 +5,7 @@ from collections import deque
 
 
 def solve(obj, proj, step_size, x_init, line_search=None, f_min=None, opt_tol=1e-6, 
-          max_iter=1000, prog_tol=1e-12):
+          max_iter=2000, prog_tol=1e-12):
     """Projected batch gradient descent with line search
     obj: f,g = obj(x) with f the objective value and g the gradient at x
     proj: w = proj(x)
@@ -53,7 +53,7 @@ def solve(obj, proj, step_size, x_init, line_search=None, f_min=None, opt_tol=1e
 
 
 def solve_BB(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6, 
-          max_iter=1000, prog_tol=1e-12):
+          max_iter=2000, prog_tol=1e-12):
     """Projected batch gradient descent with Barzilei-Bornwein step 
     obj: f,g = obj(x) with f the objective value and g the gradient at x
     proj: w = proj(x)
@@ -158,7 +158,7 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
                 q_delta_g.popleft()
                 q_delta_x.popleft()
                 q_rho.popleft()
-            if i <= 5:
+            if i <= 2:
                 # d more Barzilei-Bornwein steps
                 d = -(delta_x.T.dot(delta_g) / delta_g.T.dot(delta_g)) * g
             else:
@@ -204,7 +204,7 @@ def LBFGS_helper(q_delta_g, q_delta_x, q_rho, g, d, alpha):
 
 
 def solve_MD(obj, block_starts, step_size, x_init, line_search=None, f_min=None, opt_tol=1e-6, 
-          max_iter=1000, prog_tol=1e-12):
+          max_iter=1000, prog_tol=0.0):
     """mirror descent algorithm
     """
     n = x_init.shape[0]

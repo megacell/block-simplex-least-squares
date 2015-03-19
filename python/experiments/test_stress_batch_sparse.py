@@ -12,7 +12,8 @@ from python.bsls_utils import (construct_qp_from_least_squares,
                                 qp_to_qp_in_z,
                                 x2z)
 from python.algorithm_utils import get_solver_parts, save_progress
-from python.data_utils import load_and_process
+from python.data_utils import (load_and_process,
+                               remove_size_one_blocks)
 import python.BATCH as batch
 
 from openopt import QP
@@ -61,19 +62,19 @@ class TestSparseGradient(unittest.TestCase):
             # f = None
 
             # experiment 2
-            # data = scipy.io.loadmat('test_mat.mat')
-            # f = None
+            data = scipy.io.loadmat('test_mat.mat')
+            f = None
 
             # experiment 3
-            data = load_and_process('data/small_network_data.pkl')
-            f = data['f']
+            # data = load_and_process('data/small_network_data.pkl')
+            # f = data['f']
 
 
             A = data['A']
             b = np.squeeze(data['b'])
             x_true = np.squeeze(data['x_true'])
-
-            #print 'norm(Ax_true-b):', np.linalg.norm(A.dot(x_true)-b)
+            U = data['U']
+            f = np.squeeze(data['f'])
             block_starts = np.squeeze(data['block_starts']).astype(int)
             block_sizes = np.squeeze(data['block_sizes']).astype(int)
 
@@ -81,13 +82,15 @@ class TestSparseGradient(unittest.TestCase):
             m1 = b.shape[0]           # number of measurements
             m2 = block_sizes.shape[0] # number of blocks
 
+            G = np.diag([-1.0]*n)
+            h = [1.]*n
+
+            #print 'norm(Ax_true-b):', np.linalg.norm(A.dot(x_true)-b)
+
             Az, bz, N, x0 = ls_to_ls_in_z(A, b, block_starts, f=f)
             #print 'block_sizes:', block_sizes
             #print 'block_starts', block_starts
-            G = np.diag([-1.0]*n)
-            h = [1.]*n
-            U = data['U']
-            f = np.squeeze(data['f'])
+
             #print 'this is f', f
 
             Q, c = construct_qp_from_least_squares(A, b)

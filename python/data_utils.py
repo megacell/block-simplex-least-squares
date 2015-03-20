@@ -1,14 +1,26 @@
+
 import pickle
-import scipy.sparse as sps
-#import pandas as pd
 import numpy as np
+import scipy.sparse as sps
 
 
 __author__ = 'jeromethai'
 
 
-def load_data(filepath):
+def load_data_from_pkl(filepath):
     data = pickle.load(open( filepath, "rb" ))
+    U = data['U']
+    f = data['f']
+    A = data['A']
+    b = data['b']
+    x_true = data['x_true']
+    assert np.linalg.norm(A.dot(x_true)-b) < 1e-5
+    assert np.linalg.norm(U.dot(x_true)-f) < 1e-5
+    return A, b, U, f, x_true
+
+
+def load_data_from_mat(filepath):
+    data = scipy.io.loadmat(filepath)
     U = data['U']
     f = data['f']
     A = data['A']
@@ -91,7 +103,7 @@ def process_data(A, b, U, f, x_true):
     block_sizes = U_to_block_sizes(U)
     #A, b, U, f, x_true, block_sizes = remove_unused_paths(A, b, U, f, x_true, block_sizes)
     A, b, U, f, x_true, block_sizes = remove_size_one_blocks(A, b, U, f, x_true, block_sizes)
-    A, b = remove_measurement(A, b, 0.0)
+    A, b = remove_measurement(A, b)
     block_starts = np.append([0], np.cumsum(block_sizes)[:-1])
     assert np.linalg.norm(U.dot(x_true) - f) < 1e-5
     assert np.linalg.norm(A.dot(x_true) - b) < 1e-5
@@ -169,7 +181,7 @@ def remove_zeros_in_f(A, b, U, f, x_true, block_sizes, tol=1e-12):
 def load_and_process(filepath):
     """Load small network of L.A. and process it
     """
-    A, b, U, f, x_true = load_data(filepath)
+    A, b, U, f, x_true = load_data_from_pkl(filepath)
     return process_data(A, b, U, f, x_true)
 
 
@@ -185,6 +197,25 @@ def clean_progress(x, y):
     return x, log_y, alpha
 
 
+def aggregate(A, x_true):
+    """Shuffle the columns of A together to aggregate the ones together
+    """
+    pass
+
+
+def aggregate_helper(A, x_true, start_col, end_col):
+    """Recursively aggregate between start_col and end_col
+    """
+    pass
+
+
+def row_with_most_ones(A, start_col, end_col):
+    """Find the row with longest sequence of ones
+    with length < end_col - start_col 
+    """
+    pass
+
+
 if __name__ == '__main__':
     data = load_and_process('experiments/data/small_network_data.pkl')
     print data['f'].shape
@@ -197,5 +228,10 @@ if __name__ == '__main__':
     A = data['A']
     for i in range(A.shape[0]): print np.sum(A[i,:])
     print A.shape
-
+    # A, b, U, f, x_true = load_data_from_mat('data/test_mat.mat')
+    # print A.shape
+    # print b.shape
+    # print U.shape
+    # print f.shape
+    # print x_true.shape
 

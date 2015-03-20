@@ -12,11 +12,11 @@ from algorithm_utils import (decreasing_step_size,
                                     save_progress)
 import BATCH as batch
 from bsls_utils import (x2z, 
-                                qp_to_qp_in_z,
-                                random_least_squares,
-                                normalization,
-                                coherence,
-                                ls_to_ls_in_z)
+                        qp_to_qp_in_z,
+                        random_least_squares,
+                        normalization,
+                        coherence,
+                        ls_to_ls_in_z)
 
 
 #import ipdb
@@ -72,18 +72,17 @@ class TestStressBatch(unittest.TestCase):
         dfs = []
 
         # choose the experiment type
-        experiment = 5 # 1, 2, 3, 4, 5
+        experiment = 5
 
         # setting up experiment
         distribution = 'normal'
-        in_z = False
         lasso = False
         alpha = 1.5
-        if experiment == 2: in_z = True
+        if experiment == 2: distribution = 'cumulative normal'
         if experiment == 3: lasso = True
-        if experiment == 4: in_z, lasso = True, True
-        if experiment == 5: distribution, alpha = 'truncated', 1.5
-        if experiment == 6: distribution, alpha = 'exponential', 0.2
+        if experiment == 4: distribution = 'cumulative normal'; lasso = True
+        if experiment == 5: distribution, alpha = 'truncated', 0.05
+        if experiment == 6: distribution, alpha = 'exponential', 0.05
 
 
         for i,n in enumerate([1000]): # dimension of features
@@ -105,15 +104,13 @@ class TestStressBatch(unittest.TestCase):
                     block_starts, 0.5, in_z=in_z, lasso=lasso, distribution=distribution)
             print 'maximum eigen value in x', np.linalg.eig(Q)[0][0]
             print 'condition number in x', np.linalg.eig(Q)[0][0] / min_eig
-            if experiment >= 5:
-                min_eig = 10.
 
             G = np.diag([-1.0]*n)
             h = [1.]*n
             U = [1.]*n
             f = np.matrix(1.0)
             step_size, proj, line_search, obj = get_solver_parts((Q, c), 
-                    block_starts, min_eig, lasso=lasso)
+                    block_starts, 10.0, lasso=lasso)
 
             # converts into z-variable
             Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts, lasso=lasso)
@@ -124,13 +121,11 @@ class TestStressBatch(unittest.TestCase):
             min_eig_z = np.linalg.eig(Qz)[0][-1]
             print 'maximum eigen value in z', np.linalg.eig(Qz)[0][1]
             print 'condition number in z', np.linalg.eig(Qz)[0][0] / min_eig_z
-            if experiment >= 5:
-                min_eig_z = 10.
             Az = ls_to_ls_in_z(A, b, block_starts)[0]
             print 'coherence in x', coherence(A)
             print 'coherence in z', coherence(Az)
             step_size_z, proj_z, line_search_z, obj_z = get_solver_parts((Qz, cz), 
-                    block_starts, min_eig_z, True, lasso=lasso)
+                    block_starts, 10.0, True, lasso=lasso)
 
 
             # # CVXOPT

@@ -536,12 +536,13 @@ def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False,
         A = abs(A)
     if distribution == 'exponential':
         A = np.random.exponential(size=(m,n))
-    if in_z:
+    if distribution == 'cumulative_normal':
         M = block_starts_to_M(block_starts, n, True)
-        #A = abs(A)
-        #M = np.diag(sorted(np.random.rand(n)*100)[::-1])
-        #A = abs(A)
         A = A.dot(M)
+    if distribution == 'log_normal':
+        A = np.random.lognormal(size=(m,n))
+    if distribution == 'gamma':
+        A = np.random.gamma(size=(m,n))
 
     # construct, sparsity, normalize x_true
     x_true = abs(np.random.randn(n,1))
@@ -574,10 +575,13 @@ def coherence(A):
     m, n = A2.shape
     for i in range(m): A2[i,:] = A2[i,:]/np.linalg.norm(A2[i,:])
     coherence = 0.0
+    avg = 0.0
     for i in range(m):
         for j in range(i):
-            coherence = max(abs(A2[i,:].dot(A2[j,:])), coherence)    
-    return coherence
+            product = abs(A2[i,:].dot(A2[j,:]))
+            avg += product
+            coherence = max(product, coherence)    
+    return coherence, 2.*avg/(m*(m-1))
 
 
 def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,

@@ -158,7 +158,7 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
                 q_delta_g.popleft()
                 q_delta_x.popleft()
                 q_rho.popleft()
-            if i <= 2:
+            if i <= 5:
                 # d more Barzilei-Bornwein steps
                 d = -(delta_x.T.dot(delta_g) / delta_g.T.dot(delta_g)) * g
             else:

@@ -39,12 +39,14 @@ def get_rate_of_convergence():
     coherences = []
 
     for distribution in distributions:
+        print 'distribution', distribution
 
         dfs2 = []
         dfs3 = []
 
         for ratio in measurement_ratios:
             m = int(ratio*n) # number of measurements
+            print 'number of measurements', m
 
             # contruct blocks
             block_sizes = np.random.multinomial(n-m2,np.ones(m2)/m2) + np.ones(m2)
@@ -65,6 +67,8 @@ def get_rate_of_convergence():
             wz = np.linalg.eig(Qz)[0]
             print 'condition number in x', w[0]/w[-1]
             print 'condition number in z', wz[0]/wz[-1]
+            print 'max eigen value in x', w[0]
+            print 'max eigen value in z', wz[0]
             c_x = coherence(A)
             c_z = coherence(Az)
             dfs3.append([c_x[0], c_x[1], c_z[0], c_z[1]])
@@ -79,7 +83,6 @@ def get_rate_of_convergence():
                     block_starts, 10., True, lasso=lasso)
 
             alphas = [[] for i in range(6)]
-
 
             for i in range(trials):
                 print 'trial', i+1
@@ -157,6 +160,8 @@ def get_rate_of_convergence():
     coherences = pd.concat(coherences)
     print results
     print coherences
+    results.save('results/rates.pkl')
+    coherences.save('results/coherences.pkl')
 
 
 if __name__ == '__main__':

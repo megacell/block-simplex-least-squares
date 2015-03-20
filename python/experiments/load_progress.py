@@ -62,8 +62,8 @@ def display_progress_sparse():
 
 if __name__ == '__main__':
 
-    display_progress()
-    #display_progress_sparse()
+    #display_progress()
+    display_progress_sparse()
 
     # plt.plot(progress.loc['bb_x_2']['time'], progress.loc['bb_x_2']['f-f_min'], label='x')
     # plt.plot(progress.loc['bb_z_2']['time'], progress.loc['bb_z_2']['f-f_min'], label='z')

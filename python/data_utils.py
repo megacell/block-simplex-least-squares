@@ -19,18 +19,6 @@ def load_data_from_pkl(filepath):
     return A, b, U, f, x_true
 
 
-def load_data_from_mat(filepath):
-    data = scipy.io.loadmat(filepath)
-    U = data['U']
-    f = data['f']
-    A = data['A']
-    b = data['b']
-    x_true = data['x_true']
-    assert np.linalg.norm(A.dot(x_true)-b) < 1e-5
-    assert np.linalg.norm(U.dot(x_true)-f) < 1e-5
-    return A, b, U, f, x_true
-
-
 def check_rows(U):
     """Check rows of U to make sure that the ones are aggregated together
     """
@@ -95,6 +83,7 @@ def U_to_block_sizes(U):
 
 
 def process_data(A, b, U, f, x_true):
+    A, b = select_rows(A, b, [68,69,70,71,86,87,88,89,99,100,101,102])
     # permute U
     P = permute_column(U)
     U = U * P
@@ -105,6 +94,7 @@ def process_data(A, b, U, f, x_true):
     A, b, U, f, x_true, block_sizes = remove_size_one_blocks(A, b, U, f, x_true, block_sizes)
     A, b = remove_measurement(A, b)
     block_starts = np.append([0], np.cumsum(block_sizes)[:-1])
+    aggregate(A, x_true, block_starts)
     assert np.linalg.norm(U.dot(x_true) - f) < 1e-5
     assert np.linalg.norm(A.dot(x_true) - b) < 1e-5
     return {'A': A, 'b': b, 'U': U, 'f': f, 'x_true': x_true, 
@@ -197,23 +187,71 @@ def clean_progress(x, y):
     return x, log_y, alpha
 
 
-def aggregate(A, x_true):
+def select_rows(A, b, rows):
+    """Select rows of A and b at indices in rows
+    """
+    return A[rows,:], b[rows]
+
+
+
+def aggregate(A, x_true, block_starts):
     """Shuffle the columns of A together to aggregate the ones together
     """
-    pass
+    n = A.shape[1]
+    block_ends = np.append(block_starts[1:], [n])
+    for start, end in zip(block_starts, block_ends):
+        aggregate_helper(A, x_true, start, end)
 
 
 def aggregate_helper(A, x_true, start_col, end_col):
     """Recursively aggregate between start_col and end_col
     """
-    pass
+    row = row_with_most_ones(A, start_col, end_col)
+    if row == -1: return
+    l = push_left(A, x_true, start_col, end_col, row)
+    aggregate_helper(A, x_true, start_col, l)
+    aggregate_helper(A, x_true, l, end_col)
 
 
 def row_with_most_ones(A, start_col, end_col):
     """Find the row with longest sequence of ones
-    with length < end_col - start_col 
+    with length < end_col - start_col in A[:, start_col:end_col]
     """
-    pass
+    max_length = 0.0
+    out = -1
+    for row in range(A.shape[0]):
+        length = np.sum(A[row, start_col:end_col])
+        if max_length < length < (end_col - start_col):
+            max_length = length
+            out = row
+    return out
+
+
+def push_left(A, x_true, start_col, end_col, row):
+    """Permute columns in start_col:end_col such that 
+    all the ones in row are aggregated on the left
+    """
+    l = start_col
+    r = end_col-1
+    while l < r:
+        while A[row,l] == 1.0: l += 1
+        while A[row,r] == 0.0: r -= 1
+        if l >= r: break
+        swap(A, x_true, l, r)
+        l += 1
+        r -= 1
+    return l # index of first entry == 0.0 in A[row, start_col:end_col]
+
+
+def swap(A, x_true, i, j):
+    """Swap columns i and j of A and entries i and j of x_true
+    """
+    tmp = np.copy(A[:,i])
+    A[:,i] = A[:,j]
+    A[:,j] = tmp
+    tmp = np.copy(x_true[i])
+    x_true[i] = x_true[j]
+    x_true[j] = tmp
 
 
 if __name__ == '__main__':
@@ -228,10 +266,6 @@ if __name__ == '__main__':
     A = data['A']
     for i in range(A.shape[0]): print np.sum(A[i,:])
     print A.shape
-    # A, b, U, f, x_true = load_data_from_mat('data/test_mat.mat')
-    # print A.shape
-    # print b.shape
-    # print U.shape
-    # print f.shape
-    # print x_true.shape
+
+
 

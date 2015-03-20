@@ -573,7 +573,9 @@ def coherence(A):
     """ 
     A2 = np.copy(A)
     m, n = A2.shape
-    for i in range(m): A2[i,:] = A2[i,:]/np.linalg.norm(A2[i,:])
+    for i in range(m):
+        norm_row = np.linalg.norm(A2[i,:])
+        if norm_row > 0.0: A2[i,:] = A2[i,:]/norm_row
     coherence = 0.0
     avg = 0.0
     for i in range(m):
@@ -585,7 +587,8 @@ def coherence(A):
 
 
 def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
-                  tolerance=1e-10, permute=True, scale=True, in_z=False):
+                  tolerance=1e-10, permute=False, scale=True, in_z=False,
+                  distribution='uniform'):
     """
     A is m1 x n
     U is m2 x n
@@ -598,13 +601,32 @@ def generate_data(fname=None, n=100, m1=5, m2=10, A_sparse=0.5, alpha=1.0,
     :param alpha: prior for Dirichlet generating blocks of x
     :return:
     """
-    A = (np.random.random((m1, n)) > A_sparse).astype(np.float)
+    if distribution == 'uniform':
+        A = (np.random.random((m1, n)) > A_sparse).astype(np.float)
+    if distribution == 'affine':
+        tmp = 2 * (1 - A_sparse)
+        line = (1 - tmp) + tmp *  np.arange(n)/(n-1)
+        lines = []
+        for i in range(m1):
+            j = np.random.randint(n)
+            lines.append(np.append(line[j:],line[:j]))
+        A = (np.random.random((m1, n)) > np.array(lines)).astype(np.float)
+    if distribution == 'aggregated':
+        num_zeros = int(n*A_sparse)
+        # in expectation, this doesn't give sparsity A_sparse, but close enough
+        line = np.array([0.1]*num_zeros + [.9]*(n-num_zeros))
+        lines = []
+        for i in range(m1):
+            j = np.random.randint(n)
+            lines.append(np.append(line[j:],line[:j]))          
+        A = (np.random.random((m1, n)) > np.array(lines)).astype(np.float)
+
     block_sizes = np.random.multinomial(n-m2,np.ones(m2)/m2) + np.ones(m2)
     assert sum(block_sizes) == n, 'all-zero row present!'
     block_starts = np.append([0], np.cumsum(block_sizes[:-1])).astype(int)
-    if in_z:
-        M = block_starts_to_M(block_starts, n, True)
-        A = A.dot(M)
+    # if in_z:
+    #     M = block_starts_to_M(block_starts, n, True)
+    #     A = A.dot(M)
     x = np.concatenate([np.random.dirichlet(alpha*np.ones(bs)) for bs in \
                         block_sizes])
     U = ssla.block_diag(*[np.ones(bs) for bs in block_sizes])

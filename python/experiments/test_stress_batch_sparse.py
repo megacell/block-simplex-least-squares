@@ -14,7 +14,9 @@ from python.bsls_utils import (construct_qp_from_least_squares,
                                 coherence)
 from python.algorithm_utils import get_solver_parts, save_progress
 from python.data_utils import (load_and_process,
-                               process_data)
+                               process_data,
+                               remove_measurement,
+                               aggregate)
 import python.BATCH as batch
 
 from openopt import QP
@@ -70,29 +72,24 @@ class TestSparseGradient(unittest.TestCase):
         in_z = False
 
         # choose the experiment type
-        experiment = 3 # 1, 2 or 3
+        experiment = 1 # 1, 2 or 3
 
         for i,n in enumerate([1000]):
 
             print 'experiment', i
-            if in_z:
-                m1 = n/10 # number of measurements
-            else:
-                m1 = n/2
-            if in_z:
-                m2 = n/10 # number of blocks
-            else:
-                m2 = n/50
+            m1 = n/10 # number of measurements
+            m2 = 50 # number of blocks
 
-            A_sparse = 0.9
+            A_sparse = 0.7
+            #distribution = 'affine'
+            distribution = 'uniform'
+            #distribution = 'aggregated'
 
             if experiment == 1:
-                data = generate_data(n=n, m1=m1, A_sparse=A_sparse, scale=False, m2=m2, in_z=in_z)
-                f = None
+                data = generate_data(n=n, m1=m1, A_sparse=A_sparse, m2=m2, distribution=distribution)
 
             if experiment == 2:
                 data = scipy.io.loadmat('data/test_mat.mat')
-                f = None
                 A, b, U, f, x_true = data['A'], data['b'], data['U'], data['f'], data['x_true']
                 data = process_data(A, b, U, f, x_true)
 
@@ -107,8 +104,10 @@ class TestSparseGradient(unittest.TestCase):
             f = np.squeeze(data['f'])
             block_starts = np.squeeze(data['block_starts']).astype(int)
             block_sizes = np.squeeze(data['block_sizes']).astype(int)
-            
-            #pdb.set_trace()
+
+            aggregate(A, x_true, block_starts)
+            #assert np.linalg.norm(U.dot(x_true)-f) < 1e-5, "Ux!=f after permuting"
+            #assert np.linalg.norm(A.dot(x_true)-b) < 1e-5, "Ax!=b after permuting"
 
             n = x_true.shape[0]
             m1 = b.shape[0]           # number of measurements
@@ -141,11 +140,15 @@ class TestSparseGradient(unittest.TestCase):
             #m, n = A.shape
             #print [np.sum(A[i,:]) for i in range(m)]
             print 'coherence of A:', coherence(A)
+            print 'sparsity of A:', np.sum(abs(A)), A.shape[0]*A.shape[1]
 
             #print 'sum rows of Az'
             #m, n = Az.shape
             #print [np.sum(Az[i,:]) for i in range(m)]
             print 'coherence of Az:', coherence(Az)
+            print 'sparsity of Az:', np.sum(Az!=0.0), Az.shape[0]*Az.shape[1]
+
+            #pdb.set_trace()
 
             step_size, proj, line_search, obj = get_solver_parts((Q,c), block_starts, 1e-4, f=f)
             _, _, line_search_sparse, obj_sparse = get_solver_parts((A,b), block_starts, 10., is_sparse=True, f=f)

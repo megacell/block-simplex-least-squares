@@ -20,16 +20,14 @@ from data_utils import clean_progress
 
 __author__ = 'jeromethai'
 
-experiment = 5
 algorithms = ['raw_x', 'raw_z', 'bb_x', 'bb_z', 'lbfgs_x', 'lbfgs_z']
 
 n = 1000
 m2 = 1 # number of blocks
 trials = 10
 lasso = False
-in_z = False
 
-measurement_ratios = [0.01, 0.05, 0.1, 0.5, 1.0]
+measurement_ratios = [0.01, 0.03, 0.1, 0.3, 1.0]
 distributions = ['truncated', 'exponential', 'normal', 
                     'cumulative_normal', 'log_normal']
 
@@ -57,7 +55,7 @@ def get_rate_of_convergence():
 
             # generate random least squares
             Q, c, x_true, f_min, min_eig, A, b = random_least_squares(m, n, 
-                    block_starts, 0.5, in_z=in_z, lasso=lasso, distribution=distribution)
+                    block_starts, 0.5, lasso=lasso, distribution=distribution)
             Qz, cz, N, x0, f0 = qp_to_qp_in_z(Q, c, block_starts, lasso=lasso)
             f_min_z = f_min - f0
 

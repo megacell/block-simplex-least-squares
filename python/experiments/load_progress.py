@@ -6,6 +6,8 @@ import sys
 sys.path.append('../')
 from data_utils import clean_progress
 
+__author__ = 'jeromethai'
+
 def display_progress():
 
     progress = pd.load('results/progress.pkl')
@@ -40,23 +42,26 @@ def display_progress_sparse():
 
             x = progress.loc[algo+'_x_dense_'+str(i)]['time']
             y = progress.loc[algo+'_x_dense_'+str(i)]['f-f_min']
-            plt.plot(x, y, 'r', label='x dense')
+            plt.plot(x, y, 'r', linewidth=2, label='x dense')
 
             x = progress.loc[algo+'_z_dense_'+str(i)]['time']
             y = progress.loc[algo+'_z_dense_'+str(i)]['f-f_min']
-            plt.plot(x, y, 'g', label='z dense')
+            plt.plot(x, y, 'g', linewidth=2, label='z dense')
 
             x = progress.loc[algo+'_x_sparse_'+str(i)]['time']
             y = progress.loc[algo+'_x_sparse_'+str(i)]['f-f_min']
-            plt.plot(x, y, '--r', label='x_sparse')
+            plt.plot(x, y, '--r', linewidth=2, label='x_sparse')
 
             x = progress.loc[algo+'_z_sparse_'+str(i)]['time']
             y = progress.loc[algo+'_z_sparse_'+str(i)]['f-f_min']            
-            plt.plot(x, y, '--g', label='z_sparse')
+            plt.plot(x, y, '--g', linewidth=2, label='z_sparse')
             #plt.xscale('log')
             plt.yscale('log')
             plt.legend(loc=0)
-            #plt.title(algo+' experiment '+str(i))
+            plt.ylabel('log10 f - f_min', fontsize=16)
+            plt.xlabel('time in seconds', fontsize=16)
+            #plt.title(algo+' experiment '+str(i), fontsize=16)
+            plt.title(algo, fontsize=16)
             plt.show()
 
 

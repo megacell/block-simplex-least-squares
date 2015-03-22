@@ -49,11 +49,9 @@ void isotonic_regression(double *y, int start, int end) {
         // Check for convergence
         if (pooled == 0) break;
     }
-    i = start;
-    while (i < end) {
+    for (i = start; i < end; i++) {
         k = i + weight[i-start];
         for (j = i + 1; j < k; j++) y[j] = y[i];
-        i += weight[i-start];
     }
 
 }

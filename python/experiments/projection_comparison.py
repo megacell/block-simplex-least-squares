@@ -62,5 +62,5 @@ def comparison_PAVA_simplex_proj():
 
 
 if __name__ == '__main__':
-    compare_PAVA_implementations()
-    #comparison_PAVA_simplex_proj()
+    #compare_PAVA_implementations()
+    comparison_PAVA_simplex_proj()

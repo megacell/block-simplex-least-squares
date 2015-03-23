@@ -55,6 +55,7 @@ cdef extern from "isotonic_regression.h":
     void isotonic_regression_multi(double *y, int *blocks, int numblocks, int n)
     void isotonic_regression_2(double *y, int start, int end)
     void isotonic_regression_multi_2(double *y, int *blocks, int numblocks, int n)
+    void isotonic_regression_sparse(double *y, int start, int end, int *weight)
 
 
 def isotonic_regression_c(np.ndarray[np.double_t,ndim=1] y, start, end):
@@ -95,6 +96,18 @@ def isotonic_regression_multi_c_2(np.ndarray[np.double_t,ndim=1] y,
     y_c = np.ascontiguousarray(y, dtype=np.double)
     b_c = np.ascontiguousarray(blocks, dtype=ctypes.c_int)
     isotonic_regression_multi_2(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])
+
+
+def isotonic_regression_sparse_c(np.ndarray[np.double_t,ndim=1] y, start, end,
+                    np.ndarray[np.int_t,ndim=1] weight):
+    n = y.shape[0]
+    assert start>=0 and start<n and end>0 and end<=n
+    if start >= end: return
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
+    cdef np.ndarray[int, ndim=1, mode="c"] w_c
+    y_c = np.ascontiguousarray(y, dtype=np.double)
+    w_c = np.ascontiguousarray(weight, dtype=ctypes.c_int)
+    isotonic_regression_sparse(&y_c[0], start, end, &w_c[0])
 
 
 cdef extern from "quadratic_objective.h":

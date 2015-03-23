@@ -53,7 +53,50 @@ void isotonic_regression(double *y, int start, int end) {
         k = i + weight[i-start];
         for (j = i + 1; j < k; j++) y[j] = y[i];
     }
+}
 
+
+void isotonic_regression_sparse(double *y, int start, int end, int *weight) {
+    // Do isotonic regression from start to end (end not included)
+    double numerator, previous;
+    int i, j, k, pooled, denominator;
+    
+    while (1) {
+        // repeat until there are no more adjacent violators.
+        i = start;
+        pooled = 0;
+        while (i < end) {
+            k = i + weight[i-start];
+            previous = y[i];
+            while (k < end && y[k] <= previous) {
+                previous = y[k];
+                k += weight[k-start];
+            }
+            if (y[i] != previous) {
+                // y[i:k + 1] is a decreasing subsequence, so
+                // replace each point in the subsequence with the
+                // weighted average of the subsequence.
+                numerator = 0.0;
+                denominator = 0;
+                j = i;
+                while (j < k) {
+                    numerator += y[j] * weight[j-start];
+                    denominator += weight[j-start];
+                    j += weight[j-start];
+                }
+                y[i] = numerator / denominator;
+                weight[i-start] = denominator;
+                pooled = 1;
+            }
+            i = k;
+        }
+        // Check for convergence
+        if (pooled == 0) break;
+    }
+    //for (i = start; i < end; i++) {
+    //    k = i + weight[i-start];
+    //    for (j = i + 1; j < k; j++) y[j] = y[i];
+    //}
 }
 
 

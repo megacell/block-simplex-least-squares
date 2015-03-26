@@ -83,12 +83,12 @@ void isotonic_regression_2(double *y, int start, int end) {
 
 
 void isotonic_regression_multi(double *y, int *blocks, int numblocks, int n, int *weight, int update) {
-	// Do multiple iso tonic regressions where blocks is an array of integers 
-	// that contains the first index of each block and n the length of the array
-	for (int i = 0; i < numblocks-1; i++) {
-		isotonic_regression(y, blocks[i], blocks[i+1], weight, update);
-	}
-	isotonic_regression(y, blocks[numblocks-1], n, weight, update);
+    // Do multiple iso tonic regressions where blocks is an array of integers 
+    // that contains the first index of each block and n the length of the array
+    for (int i = 0; i < numblocks-1; i++) {
+        isotonic_regression(y, blocks[i], blocks[i+1], weight, update);
+    }
+    isotonic_regression(y, blocks[numblocks-1], n, weight, update);
 }
 
 
@@ -102,9 +102,78 @@ void isotonic_regression_multi_2(double *y, int *blocks, int numblocks, int n) {
 }
 
 
+void isotonic_regression_3(double *y, int start, int end, int *w, int update) {
+    // Do isotonic regression from start to end (end not included)
+    // if update == 1, return an updated vector y vector
+    double numerator, previous;
+    int i, j, j2, k, pooled, denominator;
+    while (1) {
+        // repeat until there are no more adjacent violators.
+        i = start;
+        pooled = 0;
+        while (i < end) {
+            k = i + w[i];
+            previous = y[i];
+            while (k < end && y[k] <= previous) {
+                previous = y[k];
+                k += w[k];
+            }
+            if (y[i] != previous) {
+                // y[i:k + 1] is a decreasing subsequence, so
+                // replace each point in the subsequence with the
+                // weighted average of the subsequence.
+                numerator = 0.0;
+                denominator = 0;
+                j = i;
+                while (j < k) {
+                    numerator += y[j] * w[j];
+                    denominator += w[j];
+                    j += w[j];
+                }
+                y[i] = numerator / denominator;
+                w[i] = denominator;
+                w[k-1] = denominator;
+                pooled = 1;
+                // now do backtracking step
+                j2 = i;
+                j = i - w[i-1];
+                while (j >= start && y[j] >= y[j2]) {
+                    y[j] = (w[j2]*y[j2] + w[j]*y[j]) / (w[j2] + w[j]);
+                    w[j] = w[j2] + w[j];
+                    j2 = j;
+                    if (j == start) break;
+                    j -= w[j-1];
+                }
+                w[k-1] = w[j2];
+            }
+            i = k;
+        }
+        // Check for convergence
+        if (pooled == 0) break;
+    }
+    if (update) {
+        i = start;
+        while (i < end) {
+            k = i + w[i];
+            for (j = i + 1; j < k; j++) y[j] = y[i];
+            i += w[i];
+        }
+    }    
+}
+
+void isotonic_regression_multi_3(double *y, int *blocks, int numblocks, int n, int *weight, int update) {
+    // Do multiple iso tonic regressions where blocks is an array of integers 
+    // that contains the first index of each block and n the length of the array
+    for (int i = 0; i < numblocks-1; i++) {
+        isotonic_regression_3(y, blocks[i], blocks[i+1], weight, update);
+    }
+    isotonic_regression_3(y, blocks[numblocks-1], n, weight, update);
+}
+
+
 int test_isotonic_regression() {
     cout << "Test isotonic_regression." << endl;
-	double doubleArray[] = {4., 5., 1., 6., 8., 7.};
+    double doubleArray[] = {4., 5., 1., 6., 8., 7.};
     int weight[] = {1, 1, 1, 1, 1, 1};
     int weight2[] = {1, 1, 1, 1, 1, 1};
     int weight3[] = {1, 1, 1, 1, 1, 1};
@@ -156,6 +225,40 @@ int test_isotonic_regression_2() {
 
     double doubleArray3[] = {4., 5., 1., 6., 8., 7.};
     isotonic_regression_multi_2(doubleArray3, blocks2, 3, 6);
+    cout << "Projected block-vector is this." << endl;
+    for (size_t i = 0; i != 6; ++i)
+        cout << doubleArray3[i] << " "; // should get 4, 5, 1, 6, 7.5, 7.5
+        cout << endl;
+
+    return 0;
+}
+
+
+int test_isotonic_regression_3() {
+    cout << "Test isotonic_regression_3." << endl;
+    double doubleArray[] = {4., 5., 1., 6., 8., 7.};
+    int weight[] = {1, 1, 1, 1, 1, 1};
+    int weight2[] = {1, 1, 1, 1, 1, 1};
+    int weight3[] = {1, 1, 1, 1, 1, 1};
+    int blocks[] = {0};
+    int blocks2[] = {0, 2, 4};
+    int update = 1;
+
+    isotonic_regression_3(doubleArray, 0, 6, weight, update);
+    cout << "Projected block-vector is this." << endl;
+    for (size_t i = 0; i != 6; ++i)
+        cout << doubleArray[i] << " "; // should get 3.3, 3.3, 3.3, 6. 7.5, 7.5
+        cout << endl;
+
+    double doubleArray2[] = {4., 5., 1., 6., 8., 7.};
+    isotonic_regression_multi_3(doubleArray2, blocks, 1, 6, weight2, update);
+    cout << "Projected block-vector is this." << endl;
+    for (size_t i = 0; i != 6; ++i)
+        cout << doubleArray2[i] << " "; // should get 3.3, 3.3, 3.3, 6. 7.5, 7.5
+        cout << endl;
+
+    double doubleArray3[] = {4., 5., 1., 6., 8., 7.};
+    isotonic_regression_multi_3(doubleArray3, blocks2, 3, 6, weight3, update);
     cout << "Projected block-vector is this." << endl;
     for (size_t i = 0; i != 6; ++i)
         cout << doubleArray3[i] << " "; // should get 4, 5, 1, 6, 7.5, 7.5

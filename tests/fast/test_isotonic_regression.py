@@ -6,7 +6,11 @@ import sys
 sys.path.append('../../')
 from python.algorithm_utils import proj_PAV
 from python.c_extensions.c_extensions import (isotonic_regression_c, 
-                                              isotonic_regression_multi_c)
+                                              isotonic_regression_multi_c,
+                                              isotonic_regression_c_2,
+                                              isotonic_regression_multi_c_2,
+                                              isotonic_regression_c_3,
+                                              isotonic_regression_multi_c_3)
 
 import numpy as np
 
@@ -31,8 +35,19 @@ class TestIsotonicRegression(unittest.TestCase):
         return z
 
 
+    def test_proj_PAV(self):
+        n = 100
+        x = np.arange(n)
+        rs = check_random_state(0)
+        for i in range(10):
+            y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
+            ir = IsotonicRegression()
+            truth = ir.fit_transform(x, y)
+            self.assertTrue(np.linalg.norm(proj_PAV(y) - truth) < 1e-8)
+
+
     def test_isotonic_regression_c(self):
-        n = 10
+        n = 100
         x = np.arange(n)
         rs = check_random_state(0)
         for i in range(10):
@@ -43,19 +58,8 @@ class TestIsotonicRegression(unittest.TestCase):
             self.assertTrue(np.linalg.norm(y - truth) < 1e-8)
 
 
-    def test_proj_PAV(self):
-        n = 10
-        x = np.arange(n)
-        rs = check_random_state(0)
-        for i in range(10):
-            y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
-            ir = IsotonicRegression()
-            truth = ir.fit_transform(x, y)
-            self.assertTrue(np.linalg.norm(proj_PAV(y) - truth) < 1e-8)
-
-
     def test_isotonic_regression_multi_c(self):
-        n = 10
+        n = 100
         rs = check_random_state(0)
         for i in range(10):
             y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
@@ -64,6 +68,51 @@ class TestIsotonicRegression(unittest.TestCase):
             isotonic_regression_multi_c(y, blocks)
             assert np.linalg.norm(y-truth) < 1e-8
 
+
+    def test_isotonic_regression_c_2(self):
+        n = 100
+        x = np.arange(n)
+        rs = check_random_state(0)
+        for i in range(10):
+            y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
+            ir = IsotonicRegression()
+            truth = ir.fit_transform(x, y)
+            isotonic_regression_c_2(y,0,n)
+            self.assertTrue(np.linalg.norm(y - truth) < 1e-8)
+
+
+    def test_isotonic_regression_multi_c_2(self):
+        n = 100
+        rs = check_random_state(0)
+        for i in range(10):
+            y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
+            blocks = np.sort(np.random.choice(n, 3, replace=False))
+            truth = self.sklearn_isotonic_regression_multi(y, blocks)
+            isotonic_regression_multi_c_2(y, blocks)
+            assert np.linalg.norm(y-truth) < 1e-8
+
+
+    def test_isotonic_regression_c_3(self):
+        n = 100
+        x = np.arange(n)
+        rs = check_random_state(0)
+        for i in range(10):
+            y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
+            ir = IsotonicRegression()
+            truth = ir.fit_transform(x, y)
+            isotonic_regression_c_3(y,0,n)
+            self.assertTrue(np.linalg.norm(y - truth) < 1e-8)
+
+
+    def test_isotonic_regression_multi_c_3(self):
+        n = 100
+        rs = check_random_state(0)
+        for i in range(10):
+            y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
+            blocks = np.sort(np.random.choice(n, 3, replace=False))
+            truth = self.sklearn_isotonic_regression_multi(y, blocks)
+            isotonic_regression_multi_c_3(y, blocks)
+            assert np.linalg.norm(y-truth) < 1e-8
 
 
 if __name__ == '__main__':

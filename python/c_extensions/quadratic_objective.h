@@ -62,7 +62,7 @@ double line_search(double *x, double f, double *g,
 
 
 int test_quad_obj() {
-
+    cout << "Test quad_obj." << endl;
     double Q[] = {4., 1, 1, 2.};
     double x[] = {0.25, 0.75};
     double c[] = {1., 1.};

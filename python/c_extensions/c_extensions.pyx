@@ -56,7 +56,9 @@ cdef extern from "isotonic_regression.h":
                                                             int *weight, int update)
     void isotonic_regression_2(double *y, int start, int end)
     void isotonic_regression_multi_2(double *y, int *blocks, int numblocks, int n)
-
+    void isotonic_regression_3(double *y, int start, int end, int *weight, int update)
+    void isotonic_regression_multi_3(double *y, int *blocks, int numblocks, int n,
+                                                            int *weight, int update)
 
 def isotonic_regression_c(np.ndarray[np.double_t,ndim=1] y, start, end,
                                 weight=None, update=1):
@@ -105,6 +107,35 @@ def isotonic_regression_multi_c_2(np.ndarray[np.double_t,ndim=1] y,
     y_c = np.ascontiguousarray(y, dtype=np.double)
     b_c = np.ascontiguousarray(blocks, dtype=ctypes.c_int)
     isotonic_regression_multi_2(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0])
+
+
+def isotonic_regression_c_3(np.ndarray[np.double_t,ndim=1] y, start, end,
+                                weight=None, update=1):
+    n = y.shape[0]
+    assert start>=0 and start<n and end>0 and end<=n
+    if start >= end: return
+    cdef np.ndarray[int, ndim=1, mode="c"] w_c
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
+    if weight is None: weight = np.ones(n).astype(int)
+    w_c = np.ascontiguousarray(weight, dtype=ctypes.c_int)
+    y_c = np.ascontiguousarray(y, dtype=np.double)
+    isotonic_regression_3(&y_c[0], start, end, &w_c[0], update)
+
+
+def isotonic_regression_multi_c_3(np.ndarray[np.double_t,ndim=1] y, 
+                     np.ndarray[np.int_t,ndim=1] blocks, weight=None, update=1):
+    assert False not in ((blocks[1:]-blocks[:-1])>0)
+    assert blocks[0]>=0 and blocks[-1]<y.shape[0]
+    n = y.shape[0]
+    cdef np.ndarray[int, ndim=1, mode="c"] w_c
+    cdef np.ndarray[np.double_t, ndim=1, mode="c"] y_c
+    cdef np.ndarray[int, ndim=1, mode="c"] b_c
+    if weight is None: weight = np.ones(n).astype(int)
+    w_c = np.ascontiguousarray(weight, dtype=ctypes.c_int)
+    y_c = np.ascontiguousarray(y, dtype=np.double)
+    b_c = np.ascontiguousarray(blocks, dtype=ctypes.c_int)
+    isotonic_regression_multi_3(&y_c[0], &b_c[0], blocks.shape[0], y.shape[0],
+                                &w_c[0], update)
 
 
 cdef extern from "quadratic_objective.h":

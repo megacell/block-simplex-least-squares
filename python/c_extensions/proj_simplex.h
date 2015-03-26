@@ -75,6 +75,7 @@ double sum;
 
 
 int test_proj_simplex() {
+    cout << "Test proj_simplex." << endl;
 
     double doubleArray[] = {5.352, 3.23, 32.78, -1.234, 1.7, 104., 53.};
     int blocks[] = {0, 2, 4};

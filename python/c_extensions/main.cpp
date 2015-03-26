@@ -14,7 +14,8 @@ int main( int argc, char ** argv ) {
 	test_proj_simplex();
 	test_isotonic_regression();
 	test_isotonic_regression_2();
-	test_quad_obj();
+	test_isotonic_regression_3();
+	// test_quad_obj();
 	return 0;
 }
 

@@ -19,18 +19,20 @@ def display_progress():
             x = np.array(data['time'])
             y = np.array(data['f-f_min'])
             x, log_y, alpha = clean_progress(x, y)
-            plt.plot(x, log_y, 'r', label='x')
-            plt.plot(x, alpha*x + log_y[0], '--r', label='x')
+            plt.plot(x, log_y, 'r', label=algo+' in x', linewidth=2)
+            plt.plot(x, alpha*x + log_y[0], '--r', label='linear fit', linewidth=2)
 
             data = progress.loc[algo+'_z_'+str(i)]
             x = np.array(data['time'])
             y = np.array(data['f-f_min'])
             x, log_y, alpha = clean_progress(x, y)
-            plt.plot(x, log_y, 'g', label='z')
-            plt.plot(x, alpha*x + log_y[0], '--g', label='x')
+            plt.plot(x, log_y, 'g', label=algo+' in z', linewidth=2)
+            plt.plot(x, alpha*x + log_y[0], '--g', label='linear fit', linewidth=2)
 
             plt.legend(loc=0)
-            plt.title(algo+' experiment '+str(i))
+            plt.xlabel('time (s)', fontsize=20)
+            plt.ylabel('f-f_min', fontsize=20)
+            plt.title(algo+' experiment '+str(i), fontsize=20)
             plt.show()
 
 def display_progress_sparse():
@@ -67,8 +69,8 @@ def display_progress_sparse():
 
 if __name__ == '__main__':
 
-    #display_progress()
-    display_progress_sparse()
+    display_progress()
+    #display_progress_sparse()
 
     # plt.plot(progress.loc['bb_x_2']['time'], progress.loc['bb_x_2']['f-f_min'], label='x')
     # plt.plot(progress.loc['bb_z_2']['time'], progress.loc['bb_z_2']['f-f_min'], label='z')

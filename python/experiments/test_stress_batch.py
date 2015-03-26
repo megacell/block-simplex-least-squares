@@ -72,12 +72,12 @@ class TestStressBatch(unittest.TestCase):
         dfs = []
 
         # choose the experiment type
-        experiment = 5
+        experiment = 6
 
         # setting up experiment
         distribution = 'normal'
         lasso = False
-        alpha = 1.5
+        alpha = 1.5 # number of measurements
         if experiment == 2: distribution = 'cumulative normal'
         if experiment == 3: lasso = True
         if experiment == 4: distribution = 'cumulative normal'; lasso = True
@@ -101,7 +101,7 @@ class TestStressBatch(unittest.TestCase):
             #block_starts = np.array([0])
 
             Q, c, x_true, f_min, min_eig, A, b = random_least_squares(m, n, 
-                    block_starts, 0.5, in_z=in_z, lasso=lasso, distribution=distribution)
+                    block_starts, 0.5, lasso=lasso, distribution=distribution)
             print 'maximum eigen value in x', np.linalg.eig(Q)[0][0]
             print 'condition number in x', np.linalg.eig(Q)[0][0] / min_eig
 

@@ -565,7 +565,8 @@ def random_least_squares(m, n, block_starts, sparsity=0.0, in_z=False,
     w, v = np.linalg.eig(Q)
     f_min = quad_obj_np(x_true, Q, c)
     min_eig = w[-1]
-    return Q, c, x_true, f_min, min_eig, A, b
+    return {'Q':Q, 'c':c, 'x_true':x_true, 'f_min':f_min, 'min_eig':min_eig, 
+            'A':A, 'b':b}
 
 
 def coherence(A):

@@ -6,7 +6,6 @@ import sys
 sys.path.append('../')
 from c_extensions.c_extensions import (isotonic_regression_c,
                                               isotonic_regression_c_2,
-                                              isotonic_regression_sparse_c,
                                               proj_simplex_c)
 import numpy as np
 from sklearn.isotonic import IsotonicRegression
@@ -94,13 +93,13 @@ def compare_PAVA_sparse():
             # in-place PAVA++
             y_copy = np.copy(y)
             start_time = time.time()
-            isotonic_regression_sparse_c(y_copy, 0, n, w)
+            isotonic_regression_c(y_copy, 0, n, w, update=0)
             time2 = time.time() - start_time
 
             # sparse in-place PAVA
             y_copy = np.copy(y)
             start_time = time.time()
-            isotonic_regression_sparse_c(y_copy, 0, n, weights)
+            isotonic_regression_c(y_copy, 0, n, weights, update=0)
             time3 = time.time() - start_time
 
             times.append([time1, time2, time3])
@@ -110,7 +109,7 @@ def compare_PAVA_sparse():
     #for n in ['1e6']: index += [n]*trials  
     tuples = zip()
     df = pd.DataFrame(times, index=index, columns=['PAVA+', 'PAVA++', 'PAVA_sparse'])
-    df.save('results/PAVA_sparse_comparison.pkl')
+    #df.save('results/PAVA_sparse_comparison.pkl')
     print df
 
 

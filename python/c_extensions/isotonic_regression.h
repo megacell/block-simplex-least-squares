@@ -106,14 +106,7 @@ void isotonic_regression_3(double *y, int start, int end, int *w, int update) {
     // Do isotonic regression from start to end (end not included)
     // if update == 1, return an updated vector y vector
     double numerator, previous;
-    int i, j, j2, k, denominator, backtrack, found_decreasing;
-    // Print stuff
-    // for (size_t ii = 0; ii != 10; ++ii)
-    //     cout << y[ii] << " ";
-    //     cout << endl;
-    // for (size_t ii = 0; ii != 10; ++ii)
-    //     cout << w[ii] << " ";
-    //     cout << endl;
+    int i, j, k, denominator;
     i = start;
     while (i < end) {
         k = i + w[i];
@@ -122,15 +115,7 @@ void isotonic_regression_3(double *y, int start, int end, int *w, int update) {
             previous = y[k];
             k += w[k];
         }
-        // Print stuff
-        // cout << "i:" << i << endl;
-        // cout << "k:" << k << endl;
-        backtrack = 0;
-        found_decreasing = 0;
         if (y[i] != previous) {
-            // Print stuff
-            found_decreasing = 1;
-            // cout << "Found decreasing subsequence." << endl;
             // y[i:k + 1] is a decreasing subsequence, so
             // replace each point in the subsequence with the
             // weighted average of the subsequence.
@@ -145,49 +130,20 @@ void isotonic_regression_3(double *y, int start, int end, int *w, int update) {
             y[i] = numerator / denominator;
             w[i] = denominator;
             w[k-1] = denominator;
-            // Print stuff
-            // for (size_t ii = 0; ii != 10; ++ii)
-            //     cout << y[ii] << " ";
-            //     cout << endl;
-            // for (size_t ii = 0; ii != 10; ++ii)
-            //     cout << w[ii] << " ";
-            //     cout << endl;
             if (i > start) {
                 // now do backtracking step
-                // cout << "Do backtracking." << endl;
-                j2 = i;
                 j = i - w[i-1];
-                while (j >= start && y[j] >= y[j2]) {
-                    backtrack = 1;
-                    y[j] = (w[j2]*y[j2] + w[j]*y[j]) / (w[j2] + w[j]);
-                    w[j] = w[j2] + w[j];
-                    j2 = j;
+                while (j >= start && y[j] >= y[i]) {
+                    y[j] = (w[i]*y[i] + w[j]*y[j]) / (w[i] + w[j]);
+                    w[j] = w[i] + w[j];
+                    i = j;
                     if (j == start) break;
                     j -= w[j-1];
                 }
-                w[k-1] = w[j2];
-                // Print stuff
-                // for (size_t ii = 0; ii != 10; ++ii)
-                //     cout << y[ii] << " ";
-                //     cout << endl;
-                // for (size_t ii = 0; ii != 10; ++ii)
-                //     cout << w[ii] << " ";
-                //     cout << endl;
-                // cout << "j2:" << j2 << endl;
+                w[k-1] = w[i];
             }
-        }
-        if (found_decreasing == 0) i = k;
-        if (backtrack == 1) i = j2; 
+        } else i = k;
     }
-    // Print stuff
-    // cout << "PAVA terminated." << endl;
-    // for (size_t ii = 0; ii != 10; ++ii)
-    //     cout << y[ii] << " ";
-    //     cout << endl;
-    // for (size_t ii = 0; ii != 10; ++ii)
-    //     cout << w[ii] << " ";
-    //     cout << endl; 
-    // cout << "Update vector." << endl;
     if (update) {
         i = start;
         while (i < end) {
@@ -196,13 +152,6 @@ void isotonic_regression_3(double *y, int start, int end, int *w, int update) {
             i += w[i];
         }
     }
-    // Print stuff
-    // for (size_t ii = 0; ii != 10; ++ii)
-    //     cout << y[ii] << " ";
-    //     cout << endl;
-    // for (size_t ii = 0; ii != 10; ++ii)
-    //     cout << w[ii] << " ";
-    //     cout << endl; 
 }
 
 void isotonic_regression_multi_3(double *y, int *blocks, int numblocks, int n, int *weight, int update) {
@@ -289,32 +238,25 @@ int test_isotonic_regression_3() {
     int blocks2[] = {0, 2, 4};
     int update = 1;
 
-    // isotonic_regression_3(doubleArray, 0, 6, weight, update);
-    // cout << "Projected block-vector is this." << endl;
-    // for (size_t i = 0; i != 6; ++i)
-    //     cout << doubleArray[i] << " "; // should get 3.3, 3.3, 3.3, 6. 7.5, 7.5
-    //     cout << endl;
-
-    double doubleArray1[] = {4., 2., 4., 5., 6.};
-    isotonic_regression_3(doubleArray1, 0, 5, weight1, update);
+    isotonic_regression_3(doubleArray, 0, 6, weight, update);
     cout << "Projected block-vector is this." << endl;
-    for (size_t i = 0; i != 5; ++i)
-        cout << doubleArray1[i] << " ";
-    cout << endl;
+    for (size_t i = 0; i != 6; ++i)
+        cout << doubleArray[i] << " "; // should get 3.3, 3.3, 3.3, 6. 7.5, 7.5
+        cout << endl;
 
-    // double doubleArray2[] = {4., 5., 1., 6., 8., 7.};
-    // isotonic_regression_multi_3(doubleArray2, blocks, 1, 6, weight2, update);
-    // cout << "Projected block-vector is this." << endl;
-    // for (size_t i = 0; i != 6; ++i)
-    //     cout << doubleArray2[i] << " "; // should get 3.3, 3.3, 3.3, 6. 7.5, 7.5
-    //     cout << endl;
+    double doubleArray2[] = {4., 5., 1., 6., 8., 7.};
+    isotonic_regression_multi_3(doubleArray2, blocks, 1, 6, weight2, update);
+    cout << "Projected block-vector is this." << endl;
+    for (size_t i = 0; i != 6; ++i)
+        cout << doubleArray2[i] << " "; // should get 3.3, 3.3, 3.3, 6. 7.5, 7.5
+        cout << endl;
 
-    // double doubleArray3[] = {4., 5., 1., 6., 8., 7.};
-    // isotonic_regression_multi_3(doubleArray3, blocks2, 3, 6, weight3, update);
-    // cout << "Projected block-vector is this." << endl;
-    // for (size_t i = 0; i != 6; ++i)
-    //     cout << doubleArray3[i] << " "; // should get 4, 5, 1, 6, 7.5, 7.5
-    //     cout << endl;
+    double doubleArray3[] = {4., 5., 1., 6., 8., 7.};
+    isotonic_regression_multi_3(doubleArray3, blocks2, 3, 6, weight3, update);
+    cout << "Projected block-vector is this." << endl;
+    for (size_t i = 0; i != 6; ++i)
+        cout << doubleArray3[i] << " "; // should get 4, 5, 1, 6, 7.5, 7.5
+        cout << endl;
 
     return 0;
 }

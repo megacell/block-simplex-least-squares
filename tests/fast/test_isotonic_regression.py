@@ -36,7 +36,7 @@ class TestIsotonicRegression(unittest.TestCase):
 
 
     def test_proj_PAV(self):
-        n = 100
+        n = 10
         x = np.arange(n)
         rs = check_random_state(0)
         for i in range(10):
@@ -47,7 +47,7 @@ class TestIsotonicRegression(unittest.TestCase):
 
 
     def test_isotonic_regression_c(self):
-        n = 100
+        n = 10
         x = np.arange(n)
         rs = check_random_state(0)
         for i in range(10):
@@ -59,7 +59,7 @@ class TestIsotonicRegression(unittest.TestCase):
 
 
     def test_isotonic_regression_multi_c(self):
-        n = 100
+        n = 10
         rs = check_random_state(0)
         for i in range(10):
             y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
@@ -82,7 +82,7 @@ class TestIsotonicRegression(unittest.TestCase):
 
 
     def test_isotonic_regression_multi_c_2(self):
-        n = 100
+        n = 10
         rs = check_random_state(0)
         for i in range(10):
             y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
@@ -93,7 +93,7 @@ class TestIsotonicRegression(unittest.TestCase):
 
 
     def test_isotonic_regression_c_3(self):
-        n = 100
+        n = 10
         x = np.arange(n)
         rs = check_random_state(0)
         for i in range(10):
@@ -105,7 +105,7 @@ class TestIsotonicRegression(unittest.TestCase):
 
 
     def test_isotonic_regression_multi_c_3(self):
-        n = 100
+        n = 10
         rs = check_random_state(0)
         for i in range(10):
             y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))

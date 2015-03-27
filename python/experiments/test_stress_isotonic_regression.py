@@ -115,7 +115,7 @@ class TestStressIsotonicRegression(unittest.TestCase):
         for n in [int(1e1), int(1e2), int(1e3), int(1e4), int(1e5), int(1e6)]:
             y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
             start_time = time.time()
-            isotonic_regression_c_3(y, 0, n)
+            isotonic_regression_c_3(y, 0, n, update=0)
             times.append(time.time() - start_time)
         print 'test isotonic_regression_c_3'
         print times
@@ -130,7 +130,7 @@ class TestStressIsotonicRegression(unittest.TestCase):
             y = rs.randint(-50, 50, size=(n,)) + 50. * np.log(1 + np.arange(n))
             blocks = np.sort(np.random.choice(n, num_blocks, replace=False))
             start_time = time.time()
-            isotonic_regression_multi_c_3(y, blocks)
+            isotonic_regression_multi_c_3(y, blocks, update=0)
             times.append(time.time() - start_time)
         print 'test isotonic_regression_multi_c_3'
         print times

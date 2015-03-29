@@ -13,7 +13,7 @@ using std::endl;
 void isotonic_regression(double *y, int start, int end, int *weight, int update) {
     // Do isotonic regression from start to end (end not included)
     // if update == 1, return an updated vector y vector
-    double numerator, previous;
+    double numerator;
     int i, j, k, pooled, denominator;
     while (1) {
         // repeat until there are no more adjacent violators.
@@ -21,12 +21,12 @@ void isotonic_regression(double *y, int start, int end, int *weight, int update)
         pooled = 0;
         while (i < end) {
             k = i + weight[i];
-            previous = y[i];
-            while (k < end && y[k] <= previous) {
-                previous = y[k];
+            j = i;
+            while (k < end && y[k] <= y[j]) {
+                j = k;
                 k += weight[k];
             }
-            if (y[i] != previous) {
+            if (y[i] != y[j]) {
                 // y[i:k + 1] is a decreasing subsequence, so
                 // replace each point in the subsequence with the
                 // weighted average of the subsequence.
@@ -105,17 +105,17 @@ void isotonic_regression_multi_2(double *y, int *blocks, int numblocks, int n) {
 void isotonic_regression_3(double *y, int start, int end, int *w, int update) {
     // Do isotonic regression from start to end (end not included)
     // if update == 1, return an updated vector y vector
-    double numerator, previous;
+    double numerator;
     int i, j, k, denominator;
     i = start;
     while (i < end) {
         k = i + w[i];
-        previous = y[i];
-        while (k < end && y[k] <= previous) {
-            previous = y[k];
+        j = i;
+        while (k < end && y[k] <= y[j]) {
+            j = k;
             k += w[k];
         }
-        if (y[i] != previous) {
+        if (y[i] != y[j]) {
             // y[i:k + 1] is a decreasing subsequence, so
             // replace each point in the subsequence with the
             // weighted average of the subsequence.

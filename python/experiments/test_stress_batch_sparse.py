@@ -301,7 +301,8 @@ class TestSparseGradient(unittest.TestCase):
 
         progress = pd.concat(dfs)
         progress.save('results/progress_sparse.pkl')
-        print alphas
+        # print alphas
+        
         # print 'times_lbfgs_x_dense', times_lbfgs_x_dense
         # print 'error_lbfgs_x_dense', error_lbfgs_x_dense
         # print 'iters_lbfgs_x_dense', iters_lbfgs_x_dense

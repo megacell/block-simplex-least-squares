@@ -139,6 +139,9 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
     i = 1
     f = obj(x, g) # should update content of g
     progress = [[0.0, f]]
+    time_direction = 0
+    time_line_search = 0
+    time_proj = 0
     start_time = time.time()
     while True:
         #print 'objective in LBFGS:', f
@@ -146,6 +149,7 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
         flag, stop = stopping(i, max_iter, f, f_old, opt_tol, prog_tol, f_min)
         if flag is True: break
         # update and project x
+        start_time_2 = time.time()
         if i == 1:
             np.add(x, -g, x_new) # should update content of x_new
         else:
@@ -164,11 +168,15 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
             else:
                 LBFGS_helper(q_delta_g, q_delta_x, q_rho, g, d, alpha)
             np.add(x, d, x_new)
+        time_direction = time.time() - start_time_2
+        start_time_2 = time.time()
         proj(x_new)
+        time_proj += time.time() - start_time_2
+        start_time_2 = time.time()
         f_new = obj(x_new, g_new) # should update content of g_new
         # do line search between x and x_new, should update x_new, g_new
-        # CONSIDER HAVING LINE SEARCH FOR ALL ITERATIONS
         f_new = line_search(x, f, g, x_new, f_new, g_new, i)
+        time_line_search += time.time() - start_time_2
         # take step
         f_old = f
         f = f_new
@@ -178,6 +186,9 @@ def solve_LBFGS(obj, proj, line_search, x_init, f_min=None, opt_tol=1e-6,
         np.copyto(g, g_new)
         i += 1
         progress.append([time.time() - start_time, f])
+    print 'time_proj', time_proj
+    print 'time_direction', time_direction
+    print 'time_line_search', time_line_search
     return {'f': f, 'x': x, 'stop': stop, 'iterations': i, 
             'progress': progress}
 

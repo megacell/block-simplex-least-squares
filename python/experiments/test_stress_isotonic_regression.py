@@ -152,12 +152,10 @@ class TestStressIsotonicRegression(unittest.TestCase):
             start_time = time.time()
             isotonic_regression_c(np.copy(y), 0, n, update=0)
             times1.append(time.time() - start_time)
-        print 'worst case times'
+        print 'worst case scenario'
         print 'iso1', times1
         print 'iso2', times2
         print 'iso3', times3
-
-
 
 
 if __name__ == '__main__':

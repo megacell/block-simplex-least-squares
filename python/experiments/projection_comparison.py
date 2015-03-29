@@ -142,6 +142,7 @@ def comparison_PAVA_simplex_proj():
 
             print time1, time2
 
+
 if __name__ == '__main__':
     #compare_PAVA_implementations()
     compare_PAVA_sparse()
